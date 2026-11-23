@@ -91,16 +91,62 @@
     button.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
     button.btn.danger { color: var(--danger); border-color: #fecaca; }
     button.btn:hover { opacity: 0.86; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-    label { display: grid; gap: 5px; font-size: 12px; color: var(--muted); font-weight: 500; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 16px;
+    }
+    .form-grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .form-grid.cols-quota {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto;
+      align-items: end;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      min-width: 0;
+    }
     input, select {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      height: 38px;
       border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 8px 10px;
+      border-radius: 7px;
+      padding: 0 11px;
       font-size: 13px;
       font-family: inherit;
       background: var(--bg);
       color: var(--ink);
+      text-overflow: ellipsis;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--ink);
+      box-shadow: 0 0 0 2px rgba(20, 20, 20, 0.12);
+      background: #fff;
+    }
+    button.btn {
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    @media (max-width: 720px) {
+      header { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
+      main { padding: 14px 16px 24px; gap: 14px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .form-grid, .form-grid.cols-3, .form-grid.cols-quota { grid-template-columns: minmax(0, 1fr); }
+      .nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .row { align-items: flex-start; }
     }
     .bar-track { width: 100%; height: 7px; background: #eeece5; border-radius: 99px; overflow: hidden; margin-top: 6px; }
     .bar-fill { height: 100%; background: var(--ink); transition: width 0.25s; }
@@ -165,11 +211,11 @@
           <span class="mono">Resets automatically at midnight</span>
         </h2>
         <div id="quotasList"></div>
-        <div class="form-grid" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
+        <div class="form-grid cols-quota" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
           <label>Group / Device Name<input id="qName" placeholder="e.g. Kids Desktop" /></label>
-          <label>MAC Address(es) (comma-separated)<input id="qMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
-          <label>Daily Limit (e.g. 1h30m, 90m)<input id="qLimit" value="1h30m" /></label>
-          <label style="align-self: end;"><button class="btn primary" id="addQuotaBtn">Save Daily Quota</button></label>
+          <label>MAC Address(es)<input id="qMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
+          <label>Daily Limit<input id="qLimit" value="1h30m" /></label>
+          <button class="btn primary" id="addQuotaBtn" style="height:38px;">Save Quota</button>
         </div>
       </div>
 
@@ -188,11 +234,11 @@
         <div id="schedulesList"></div>
         <div class="form-grid" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
           <label>Schedule Name<input id="sName" placeholder="School Night Bedtime" /></label>
+          <label>Target MAC(s)<input id="sMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
           <label>Start Time (24h)<input id="sStart" type="time" value="21:00" /></label>
           <label>End Time (24h)<input id="sEnd" type="time" value="07:00" /></label>
-          <label>Target MAC(s)<input id="sMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
-          <label style="align-self: end;"><button class="btn primary" id="addSchedBtn">Save Schedule</button></label>
         </div>
+        <div style="margin-top: 12px;"><button class="btn primary" id="addSchedBtn">Save Schedule</button></div>
       </div>
     </section>
 
@@ -203,11 +249,15 @@
           <span class="mono" id="dnsEndpoint">—</span>
         </h2>
         <div class="chips" id="catChips"></div>
-        <div class="form-grid" style="margin-top: 16px;">
-          <label>Block Custom Domain<input id="customDomain" placeholder="example.com" /></label>
-          <label style="align-self: end;"><button class="btn primary" id="blockDomainBtn">Block Domain</button></label>
-          <label>Verify Sinkhole Live<input id="testDomain" value="roblox.com" /></label>
-          <label style="align-self: end;"><button class="btn" id="testDnsBtn">Run UDP DNS Test</button></label>
+        <div class="form-grid" style="margin-top: 16px; align-items: end;">
+          <div style="display:flex; gap:8px; align-items:flex-end;">
+            <label style="flex:1;">Block Custom Domain<input id="customDomain" placeholder="example.com" /></label>
+            <button class="btn primary" id="blockDomainBtn" style="height:38px;">Block</button>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-end;">
+            <label style="flex:1;">Verify Sinkhole Live<input id="testDomain" value="roblox.com" /></label>
+            <button class="btn" id="testDnsBtn" style="height:38px;">Run UDP Test</button>
+          </div>
         </div>
         <div id="dnsTestOut" class="mono" style="margin-top: 10px;"></div>
       </div>

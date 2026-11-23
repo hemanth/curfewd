@@ -1,0 +1,53 @@
+{
+  "name": "curfewd",
+  "version": "0.1.0",
+  "description": "Local parental control daemon, CLI, and web dashboard for any home router.",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "bin": {
+    "curfewd": "bin/curfewd.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/curfewd.mjs serve",
+    "setup": "node bin/curfewd.mjs setup",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "parental-control",
+    "router",
+    "curfew",
+    "quota",
+    "dns-sinkhole",
+    "home-network",
+    "lan",
+    "cli",
+    "daemon",
+    "openwrt",
+    "unifi",
+    "bgw320"
+  ],
+  "homepage": "https://github.com/hemanth/curfewd",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hemanth/curfewd.git"
+  },
+  "author": "Hemanth HM <hemanth@h3manth.com> (https://h3manth.com)",
+  "license": "MIT"
+}

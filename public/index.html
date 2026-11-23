@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>curfewd · Local Parental Control Studio</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141414'/%3E%3Cpath d='M16 6l8 3.5v6.8c0 5-3.4 9.1-8 10.7-4.6-1.6-8-5.7-8-10.7V9.5L16 6z' fill='none' stroke='%23fbfaf7' stroke-width='2.2'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #fbfaf7;
+      --card: #ffffff;
+      --ink: #141414;
+      --muted: #66635c;
+      --line: #e4e1d8;
+      --accent: #141414;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(251, 250, 247, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; font-size: 17px; }
+    .brand code { font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); color: var(--muted); }
+    .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    main { max-width: 1080px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .stat-val { font-size: 24px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+    h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .row:first-of-type { border-top: none; }
+    .mono { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-family: var(--mono); font-weight: 600;
+      padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line);
+    }
+    .pill.online { color: var(--ok); border-color: #bbf7d0; background: #f0fdf4; }
+    .pill.offline { color: var(--muted); background: #f5f4f0; }
+    .pill.blocked { color: var(--danger); border-color: #fecaca; background: #fef2f2; }
+    button.btn {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      padding: 6px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    button.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+    button.btn.danger { color: var(--danger); border-color: #fecaca; }
+    button.btn:hover { opacity: 0.86; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+    label { display: grid; gap: 5px; font-size: 12px; color: var(--muted); font-weight: 500; }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .bar-track { width: 100%; height: 7px; background: #eeece5; border-radius: 99px; overflow: hidden; margin-top: 6px; }
+    .bar-fill { height: 100%; background: var(--ink); transition: width 0.25s; }
+    .bar-fill.over { background: var(--danger); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+      padding: 6px 11px; border-radius: 99px; font-size: 12px; cursor: pointer;
+    }
+    .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .hidden { display: none; }
+    .toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--ink); color: #fff; padding: 10px 14px;
+      border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>curfewd</span>
+      <code id="adapterBadge">universal</code>
+    </div>
+    <div class="nav">
+      <button class="tab-btn active" data-tab="overview">Devices & Quotas</button>
+      <button class="tab-btn" data-tab="schedules">Bedtime</button>
+      <button class="tab-btn" data-tab="dns">DNS Sinkhole</button>
+      <button class="tab-btn" data-tab="setup">Router Setup</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stats">
+      <div class="card">
+        <div class="stat-label">Router Adapter</div>
+        <div class="stat-val" id="statDriver">—</div>
+        <div class="stat-sub" id="statGateway">—</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">LAN Devices</div>
+        <div class="stat-val" id="statDevices">0</div>
+        <div class="stat-sub" id="statOnline">0 online</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Daily Quotas</div>
+        <div class="stat-val" id="statQuotas">0</div>
+        <div class="stat-sub" id="statBlocked">0 blocked now</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">DNS Sinkhole</div>
+        <div class="stat-val" id="statDns">—</div>
+        <div class="stat-sub" id="statDomains">0 domains blocked</div>
+      </div>
+    </section>
+
+    <section id="tab-overview" class="tab-panel">
+      <div class="card" style="margin-bottom: 20px;">
+        <h2>
+          <span>Daily Usage Quotas</span>
+          <span class="mono">Resets automatically at midnight</span>
+        </h2>
+        <div id="quotasList"></div>
+        <div class="form-grid" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
+          <label>Group / Device Name<input id="qName" placeholder="e.g. Kids Desktop" /></label>
+          <label>MAC Address(es) (comma-separated)<input id="qMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
+          <label>Daily Limit (e.g. 1h30m, 90m)<input id="qLimit" value="1h30m" /></label>
+          <label style="align-self: end;"><button class="btn primary" id="addQuotaBtn">Save Daily Quota</button></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span>Discovered LAN Devices</span>
+          <button class="btn" id="refreshBtn">Refresh</button>
+        </h2>
+        <div id="devicesList"></div>
+      </div>
+    </section>
+
+    <section id="tab-schedules" class="tab-panel hidden">
+      <div class="card">
+        <h2><span>Bedtime & Focus Schedules</span></h2>
+        <div id="schedulesList"></div>
+        <div class="form-grid" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
+          <label>Schedule Name<input id="sName" placeholder="School Night Bedtime" /></label>
+          <label>Start Time (24h)<input id="sStart" type="time" value="21:00" /></label>
+          <label>End Time (24h)<input id="sEnd" type="time" value="07:00" /></label>
+          <label>Target MAC(s)<input id="sMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
+          <label style="align-self: end;"><button class="btn primary" id="addSchedBtn">Save Schedule</button></label>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-dns" class="tab-panel hidden">
+      <div class="card" style="margin-bottom: 20px;">
+        <h2>
+          <span>Category Blocklists</span>
+          <span class="mono" id="dnsEndpoint">—</span>
+        </h2>
+        <div class="chips" id="catChips"></div>
+        <div class="form-grid" style="margin-top: 16px;">
+          <label>Block Custom Domain<input id="customDomain" placeholder="example.com" /></label>
+          <label style="align-self: end;"><button class="btn primary" id="blockDomainBtn">Block Domain</button></label>
+          <label>Verify Sinkhole Live<input id="testDomain" value="roblox.com" /></label>
+          <label style="align-self: end;"><button class="btn" id="testDnsBtn">Run UDP DNS Test</button></label>
+        </div>
+        <div id="dnsTestOut" class="mono" style="margin-top: 10px;"></div>
+      </div>
+      <div class="card">
+        <h2><span>Recent DNS Queries</span></h2>
+        <div id="dnsLogList"></div>
+      </div>
+    </section>
+
+    <section id="tab-setup" class="tab-panel hidden">
+      <div class="card">
+        <h2>
+          <span>Any-Router Setup Wizard</span>
+          <button class="btn" id="detectBtn">Auto-Detect My Router</button>
+        </h2>
+        <p class="mono" id="detectHint" style="margin: 0 0 14px;">Select your router or use Universal mode (works on any router without a password).</p>
+        <div class="form-grid">
+          <label>Router Adapter<select id="setupDriver"></select></label>
+          <label>Gateway URL<input id="setupGateway" placeholder="http://192.168.1.1" /></label>
+          <label>Username (if required)<input id="setupUser" placeholder="admin / root" /></label>
+          <label>Password / Access Code<input id="setupPass" type="password" placeholder="Optional for Universal mode" /></label>
+        </div>
+        <div id="universalGuide" class="mono" style="margin-top: 12px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px;">
+          Universal mode works on any router (eero, Nest WiFi, Xfinity, Spectrum, Orbi, Verizon) with zero password. Point your router DHCP DNS or child device DNS to <strong id="guideDnsIp">—</strong> (run <code>sudo curfewd serve --dns-port 53</code> for standard port 53).
+        </div>
+        <div id="customHooksBox" class="form-grid hidden" style="margin-top: 12px;">
+          <label>Block Shell Command ({{mac}}, {{ip}})<input id="setupBlockCmd" placeholder="ssh router 'nft add element ... {{mac}}'" /></label>
+          <label>Unblock Shell Command ({{mac}}, {{ip}})<input id="setupUnblockCmd" placeholder="ssh router 'nft delete element ... {{mac}}'" /></label>
+        </div>
+        <div style="margin-top: 14px; display: flex; gap: 10px; align-items: center;">
+          <button class="btn primary" id="saveSetupBtn">Test Connection & Save</button>
+          <span class="mono" id="setupResult"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let appData = null;
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2400);
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+    function render() {
+      const { state, devices, quotas, adapters, categories, dns } = appData;
+      const activeAdapter = adapters.find(a => a.id === state.router.driver) || adapters[0];
+
+      document.getElementById('adapterBadge').textContent = activeAdapter.id;
+      document.getElementById('statDriver').textContent = activeAdapter.id;
+      document.getElementById('statGateway').textContent = state.router.gatewayUrl;
+      document.getElementById('statDevices').textContent = devices.length;
+      document.getElementById('statOnline').textContent = `${devices.filter(d => d.status === 'online').length} online`;
+      document.getElementById('statQuotas').textContent = quotas.length;
+      document.getElementById('statBlocked').textContent = `${devices.filter(d => d.isBlocked).length} blocked now`;
+      document.getElementById('statDns').textContent = dns.active ? `UDP :${dns.port}` : 'Off';
+      document.getElementById('statDomains').textContent = `${(state.blockedDomains || []).length} domains blocked`;
+      document.getElementById('dnsEndpoint').textContent = dns.active ? `Point device DNS to ${dns.lanIp}:${dns.port}` : 'DNS Sinkhole inactive';
+
+      // Quotas
+      const qEl = document.getElementById('quotasList');
+      if (quotas.length === 0) {
+        qEl.innerHTML = `<div class="mono">No daily quotas configured yet. Add one below (e.g. 1h30m/day).</div>`;
+      } else {
+        qEl.innerHTML = quotas.map(q => {
+          const pct = q.limitSeconds > 0 ? Math.min(100, Math.round((q.usedSeconds / q.limitSeconds) * 100)) : 100;
+          return `<div class="row">
+            <div style="flex: 1; min-width: 240px;">
+              <div><strong>${q.name}</strong> <span class="pill ${q.blockedToday ? 'blocked' : 'online'}">${q.blockedToday ? 'LOCKED' : q.remainingFormatted + ' left'}</span></div>
+              <div class="mono">${q.macs.join(', ')} · Used ${q.usedFormatted} / ${q.limitFormatted}</div>
+              <div class="bar-track"><div class="bar-fill ${q.blockedToday ? 'over' : ''}" style="width:${pct}%"></div></div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn" onclick="bonusQuota('${q.id}')">+30m</button>
+              <button class="btn" onclick="resetQuota('${q.id}')">Reset</button>
+              <button class="btn danger" onclick="deleteQuota('${q.id}')">Delete</button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // Devices
+      const dEl = document.getElementById('devicesList');
+      if (devices.length === 0) {
+        dEl.innerHTML = `<div class="mono">No devices discovered yet. Open Router Setup to configure your gateway.</div>`;
+      } else {
+        dEl.innerHTML = devices.map(d => {
+          const pillCls = d.isBlocked ? 'blocked' : d.status === 'online' ? 'online' : 'offline';
+          const pillTxt = d.isBlocked ? 'BLOCKED' : d.status.toUpperCase();
+          return `<div class="row">
+            <div>
+              <div><strong>${d.displayName}</strong> <span class="pill ${pillCls}">${pillTxt}</span></div>
+              <div class="mono">${d.mac} · ${d.ipv4 || 'no IPv4'} · ${d.band}${d.quota ? ` · Quota ${d.quota.usedFormatted}/${d.quota.limitFormatted}` : ''}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              ${d.isPaused
+                ? `<button class="btn primary" onclick="resumeDev('${d.mac}')">Resume</button>`
+                : `<button class="btn" onclick="pauseDev('${d.mac}', 60)">Pause 1h</button><button class="btn danger" onclick="pauseDev('${d.mac}', null)">Pause</button>`
+              }
+              <button class="btn" onclick="prefillQuota('${d.displayName.replace(/'/g, '')}', '${d.mac}')">Set Quota</button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // Schedules
+      const sEl = document.getElementById('schedulesList');
+      const scheds = state.schedules || [];
+      sEl.innerHTML = scheds.length === 0
+        ? `<div class="mono">No bedtime schedules yet.</div>`
+        : scheds.map(s => `<div class="row">
+            <div>
+              <div><strong>${s.name}</strong> <span class="pill ${s.enabled ? 'online' : 'offline'}">${s.enabled ? 'ENABLED' : 'OFF'}</span></div>
+              <div class="mono">${s.startTime} → ${s.endTime} · ${(s.days || []).join(', ')} · ${(s.targetMacs || []).join(', ')}</div>
+            </div>
+          </div>`).join('');
+
+      // Categories
+      const blockedCats = new Set(state.blockedCategories || []);
+      document.getElementById('catChips').innerHTML = categories.map(c =>
+        `<button class="chip ${blockedCats.has(c.id) ? 'on' : ''}" onclick="toggleCat('${c.id}', ${!blockedCats.has(c.id)})">${c.label}</button>`
+      ).join('');
+
+      // DNS log
+      const logs = dns.recentQueries || [];
+      document.getElementById('dnsLogList').innerHTML = logs.length === 0
+        ? `<div class="mono">No DNS queries logged yet. Run a UDP DNS Test above.</div>`
+        : logs.slice(0, 20).map(q => `<div class="row" style="padding:7px 0;">
+            <span class="mono">${q.ts.slice(11, 19)} · ${q.clientIp} → <strong>${q.domain}</strong> (${q.qtype})</span>
+            <span class="pill ${q.action === 'BLOCKED' ? 'blocked' : 'online'}">${q.action}</span>
+          </div>`).join('');
+
+      // Setup dropdown
+      const sel = document.getElementById('setupDriver');
+      if (!sel.options.length) {
+        sel.innerHTML = adapters.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      }
+      sel.value = state.router.driver;
+      document.getElementById('setupGateway').value = state.router.gatewayUrl || '';
+      document.getElementById('setupUser').value = state.router.username || '';
+      document.getElementById('setupPass').value = state.router.passwordConfigured ? '••••••••' : '';
+      document.getElementById('setupBlockCmd').value = state.router.blockCmd || '';
+      document.getElementById('setupUnblockCmd').value = state.router.unblockCmd || '';
+      document.getElementById('guideDnsIp').textContent = `${dns.lanIp} (port ${dns.port})`;
+      const updateAdapterFields = () => {
+        document.getElementById('universalGuide').classList.toggle('hidden', sel.value !== 'universal');
+        document.getElementById('customHooksBox').classList.toggle('hidden', sel.value !== 'custom');
+      };
+      sel.onchange = updateAdapterFields;
+      updateAdapterFields();
+
+      if (!state.setupCompleted && !window.__setupOpenedOnce) {
+        window.__setupOpenedOnce = true;
+        switchTab('setup');
+      }
+    }
+
+    async function load() {
+      appData = await api('/api/state');
+      render();
+    }
+
+    window.pauseDev = async (mac, duration) => {
+      await api('/api/devices/pause', { method: 'POST', body: { mac, duration } });
+      toast('Device paused');
+      await load();
+    };
+    window.resumeDev = async (mac) => {
+      await api('/api/devices/resume', { method: 'POST', body: { mac } });
+      toast('Device resumed');
+      await load();
+    };
+    window.prefillQuota = (name, mac) => {
+      document.getElementById('qName').value = name;
+      document.getElementById('qMacs').value = mac;
+      document.getElementById('qLimit').focus();
+    };
+    window.bonusQuota = async (id) => {
+      await api('/api/quotas/bonus', { method: 'POST', body: { id, minutes: '30m' } });
+      toast('Added +30m bonus');
+      await load();
+    };
+    window.resetQuota = async (id) => {
+      await api('/api/quotas/reset', { method: 'POST', body: { id } });
+      toast('Reset today usage to 0m');
+      await load();
+    };
+    window.deleteQuota = async (id) => {
+      await api(`/api/quotas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      toast('Quota removed');
+      await load();
+    };
+    window.toggleCat = async (category, enabled) => {
+      await api('/api/dns/category', { method: 'POST', body: { category, enabled } });
+      toast(`${enabled ? 'Blocked' : 'Unblocked'} ${category}`);
+      await load();
+    };
+
+    document.getElementById('refreshBtn').addEventListener('click', load);
+    document.getElementById('addQuotaBtn').addEventListener('click', async () => {
+      const name = document.getElementById('qName').value.trim();
+      const macs = document.getElementById('qMacs').value.split(',').map(s => s.trim()).filter(Boolean);
+      const limit = document.getElementById('qLimit').value.trim();
+      await api('/api/quotas', { method: 'POST', body: { name, macs, limit } });
+      toast(`Saved quota: ${name} (${limit}/day)`);
+      await load();
+    });
+    document.getElementById('addSchedBtn').addEventListener('click', async () => {
+      const name = document.getElementById('sName').value.trim();
+      const startTime = document.getElementById('sStart').value;
+      const endTime = document.getElementById('sEnd').value;
+      const targetMacs = document.getElementById('sMacs').value.split(',').map(s => s.trim()).filter(Boolean);
+      await api('/api/schedules', { method: 'POST', body: { name, startTime, endTime, targetMacs } });
+      toast(`Saved schedule: ${name}`);
+      await load();
+    });
+    document.getElementById('blockDomainBtn').addEventListener('click', async () => {
+      const domain = document.getElementById('customDomain').value.trim();
+      if (!domain) return;
+      await api('/api/dns/domain', { method: 'POST', body: { domain, action: 'block' } });
+      document.getElementById('customDomain').value = '';
+      toast(`Blocked ${domain}`);
+      await load();
+    });
+    document.getElementById('testDnsBtn').addEventListener('click', async () => {
+      const domain = document.getElementById('testDomain').value.trim();
+      const res = await api('/api/dns/test', { method: 'POST', body: { domain } });
+      document.getElementById('dnsTestOut').textContent = res.ok
+        ? `${res.domain} → ${res.resolvedIp} (${res.sinkholed ? 'BLOCKED by sinkhole' : 'ALLOWED'})`
+        : `Error: ${res.error}`;
+      await load();
+    });
+    document.getElementById('detectBtn').addEventListener('click', async () => {
+      const res = await api('/api/router/detect');
+      document.getElementById('setupDriver').value = res.matchedDriver;
+      document.getElementById('setupGateway').value = res.gatewayUrl;
+      document.getElementById('detectHint').textContent = `Detected: ${res.modelHint} at ${res.gatewayIp}`;
+    });
+    document.getElementById('saveSetupBtn').addEventListener('click', async () => {
+      const res = await api('/api/setup', {
+        method: 'POST',
+        body: {
+          driver: document.getElementById('setupDriver').value,
+          gatewayUrl: document.getElementById('setupGateway').value,
+          username: document.getElementById('setupUser').value,
+          password: document.getElementById('setupPass').value,
+          blockCmd: document.getElementById('setupBlockCmd').value,
+          unblockCmd: document.getElementById('setupUnblockCmd').value
+        }
+      });
+      document.getElementById('setupResult').textContent = `${res.test.ok ? 'OK' : 'WARN'}: ${res.test.detail}`;
+      toast('Router config saved');
+      await load();
+    });
+
+    load();
+  </script>
+</body>
+</html>

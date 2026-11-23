@@ -1,0 +1,14 @@
+node_modules/
+data/
+.curfewd/
+renders/
+videos/
+*.mp4
+*.webm
+*.wav
+*.srt
+*.vtt
+*.ass
+*.tgz
+*.log
+.DS_Store

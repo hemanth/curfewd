@@ -1,6 +1,6 @@
 {
   "name": "curfewd",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local parental control daemon, CLI, and web dashboard for any home router.",
   "type": "module",
   "main": "src/index.js",

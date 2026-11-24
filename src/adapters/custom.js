@@ -1,6 +1,6 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { normalizeMac } from '../state.js';
+import { normalizeMac, isValidMac } from '../state.js';
 import { scanArpNdpDevices } from './universal.js';
 
 const execAsync = promisify(exec);
@@ -24,6 +24,13 @@ export const CUSTOM_META = {
   }
 };
 
+function sanitizeIp(ip) {
+  const s = String(ip ?? '').trim();
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(s)) return s;
+  if (/^[0-9a-f:]+$/i.test(s) && s.includes(':')) return s;
+  return '';
+}
+
 function interpolate(template, vars) {
   return String(template || '')
     .replace(/\{\{mac\}\}/gi, vars.mac || '')
@@ -34,18 +41,27 @@ export class CustomAdapter {
   constructor(config = {}) {
     this.id = 'custom';
     this.meta = CUSTOM_META;
-    this.blockCmd = (config.blockCmd || '').trim();
-    this.unblockCmd = (config.unblockCmd || '').trim();
-    this.listCmd = (config.listCmd || '').trim();
+    const hooks = config.customHooks || {};
+    this.blockCmd = (config.blockCmd ?? hooks.blockCmd ?? '').trim();
+    this.unblockCmd = (config.unblockCmd ?? hooks.unblockCmd ?? '').trim();
+    this.listCmd = (config.listCmd ?? hooks.listCmd ?? '').trim();
   }
 
   async testConnection() {
-    const devices = await this.listDevices();
-    return {
-      ok: true,
-      model: 'Custom Router Hook',
-      detail: `Ready (${devices.length} LAN host(s), block hook: ${this.blockCmd ? 'configured' : 'DNS sinkhole fallback'})`
-    };
+    try {
+      const devices = await this.listDevices();
+      return {
+        ok: true,
+        model: 'Custom Router Hook',
+        detail: `Ready (${devices.length} LAN host(s), block hook: ${this.blockCmd ? 'configured' : 'DNS sinkhole fallback'})`
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        model: 'Custom Router Hook',
+        detail: err.message
+      };
+    }
   }
 
   async listDevices() {
@@ -53,16 +69,22 @@ export class CustomAdapter {
       const { stdout } = await execAsync(this.listCmd, { timeout: 8000 });
       const parsed = JSON.parse(stdout);
       if (Array.isArray(parsed)) {
-        return parsed.map((d) => ({
-          mac: normalizeMac(d.mac),
-          name: d.name || d.ip || d.mac,
-          ipv4: d.ipv4 || d.ip || null,
-          ipv6: d.ipv6 || null,
-          ipv6List: d.ipv6List || [],
-          status: d.status || 'online',
-          band: d.band || 'LAN',
-          lastActivity: d.lastActivity || ''
-        }));
+        return parsed
+          .map((d) => {
+            const mac = normalizeMac(d.mac);
+            if (!mac) return null;
+            return {
+              mac,
+              name: d.name || d.ip || mac,
+              ipv4: d.ipv4 || d.ip || null,
+              ipv6: d.ipv6 || null,
+              ipv6List: d.ipv6List || [],
+              status: d.status || 'online',
+              band: d.band || 'LAN',
+              lastActivity: d.lastActivity || ''
+            };
+          })
+          .filter(Boolean);
       }
     }
     return scanArpNdpDevices();
@@ -70,22 +92,36 @@ export class CustomAdapter {
 
   async blockDevice({ mac, ipv4 = null }) {
     const cleanMac = normalizeMac(mac);
+    if (!isValidMac(cleanMac)) {
+      return { ok: false, mode: 'custom-hook', detail: 'Invalid MAC address' };
+    }
     if (!this.blockCmd) {
       return { ok: true, mode: 'custom-dns-fallback', detail: `No blockCmd set; enforced via DNS sinkhole for ${cleanMac}` };
     }
-    const cmd = interpolate(this.blockCmd, { mac: cleanMac, ip: ipv4 || '' });
-    await execAsync(cmd, { timeout: 10000 });
-    return { ok: true, mode: 'custom-hook', detail: `Executed block hook for ${cleanMac}` };
+    try {
+      const cmd = interpolate(this.blockCmd, { mac: cleanMac, ip: sanitizeIp(ipv4) });
+      await execAsync(cmd, { timeout: 10000 });
+      return { ok: true, mode: 'custom-hook', detail: `Executed block hook for ${cleanMac}` };
+    } catch (err) {
+      return { ok: false, mode: 'custom-hook', detail: err.message };
+    }
   }
 
   async unblockDevice({ mac, ipv4 = null }) {
     const cleanMac = normalizeMac(mac);
+    if (!isValidMac(cleanMac)) {
+      return { ok: false, mode: 'custom-hook', detail: 'Invalid MAC address' };
+    }
     if (!this.unblockCmd) {
       return { ok: true, mode: 'custom-dns-fallback', detail: `No unblockCmd set; released from DNS sinkhole for ${cleanMac}` };
     }
-    const cmd = interpolate(this.unblockCmd, { mac: cleanMac, ip: ipv4 || '' });
-    await execAsync(cmd, { timeout: 10000 });
-    return { ok: true, mode: 'custom-hook', detail: `Executed unblock hook for ${cleanMac}` };
+    try {
+      const cmd = interpolate(this.unblockCmd, { mac: cleanMac, ip: sanitizeIp(ipv4) });
+      await execAsync(cmd, { timeout: 10000 });
+      return { ok: true, mode: 'custom-hook', detail: `Executed unblock hook for ${cleanMac}` };
+    } catch (err) {
+      return { ok: false, mode: 'custom-hook', detail: err.message };
+    }
   }
 
   async isDeviceBlocked() {

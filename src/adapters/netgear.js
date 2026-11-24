@@ -18,6 +18,27 @@ export const NETGEAR_META = {
   }
 };
 
+function escapeXml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function getSoapError(xml) {
+  if (/<SOAP-ENV:Fault>/i.test(xml)) {
+    const fault = xml.match(/<faultstring>([\s\S]*?)<\/faultstring>/i)?.[1]?.trim();
+    return fault || 'Netgear SOAP Fault';
+  }
+  const code = xml.match(/<ResponseCode>(\d+)<\/ResponseCode>/i)?.[1];
+  if (code && code !== '000') {
+    return `Netgear SOAP ResponseCode ${code}`;
+  }
+  return null;
+}
+
 export class NetgearAdapter {
   constructor(config = {}) {
     this.id = 'netgear';
@@ -43,6 +64,9 @@ export class NetgearAdapter {
       body: envelope,
       signal: AbortSignal.timeout(8000)
     });
+    if (!res.ok) {
+      throw new Error(`Netgear SOAP HTTP ${res.status}`);
+    }
     return res.text();
   }
 
@@ -50,7 +74,7 @@ export class NetgearAdapter {
     const xml = await this._soap(
       'ParentalControl',
       'Authenticate',
-      `<NewUsername>${this.username}</NewUsername><NewPassword>${this.password}</NewPassword>`
+      `<NewUsername>${escapeXml(this.username)}</NewUsername><NewPassword>${escapeXml(this.password)}</NewPassword>`
     );
     const ok = xml.includes('<ResponseCode>000</ResponseCode>');
     return { ok, reason: ok ? 'Authenticated' : 'Netgear SOAP authentication failed' };
@@ -67,15 +91,52 @@ export class NetgearAdapter {
   }
 
   async listDevices() {
-    await this.authenticate();
+    const auth = await this.authenticate();
+    if (!auth.ok) throw new Error(auth.reason);
+
+    // Prefer GetAttachDevice2 XML format, fall back to legacy GetAttachDevice
+    try {
+      const xml2 = await this._soap('DeviceInfo', 'GetAttachDevice2');
+      const soapErr = getSoapError(xml2);
+      const raw2 = xml2.match(/<NewAttachDevice2>([\s\S]*?)<\/NewAttachDevice2>/i)?.[1];
+      if (!soapErr && raw2) {
+        const devices = [];
+        for (const block of raw2.matchAll(/<Device>([\s\S]*?)<\/Device>/gi)) {
+          const item = block[1];
+          const rawMac = item.match(/<MAC>([\s\S]*?)<\/MAC>/i)?.[1]?.trim();
+          const mac = normalizeMac(rawMac);
+          if (!mac) continue;
+          const ip = item.match(/<IP>([\s\S]*?)<\/IP>/i)?.[1]?.trim() || null;
+          const name = item.match(/<Name>([\s\S]*?)<\/Name>/i)?.[1]?.trim() || ip || mac;
+          const conn =
+            item.match(/<ConnectionType>([\s\S]*?)<\/ConnectionType>/i)?.[1]?.trim() ||
+            item.match(/<ConnectionMethod>([\s\S]*?)<\/ConnectionMethod>/i)?.[1]?.trim() ||
+            'LAN';
+          devices.push({
+            mac,
+            name,
+            ipv4: ip,
+            ipv6: null,
+            ipv6List: [],
+            status: 'online',
+            band: conn,
+            lastActivity: ''
+          });
+        }
+        return devices;
+      }
+    } catch {}
+
     const xml = await this._soap('DeviceInfo', 'GetAttachDevice');
+    const soapErr = getSoapError(xml);
+    if (soapErr) throw new Error(soapErr);
     const raw = xml.match(/<NewAttachDevice>([\s\S]*?)<\/NewAttachDevice>/i)?.[1] || '';
     const devices = [];
     for (const row of raw.split('@').slice(1)) {
       const parts = row.split(';');
       if (parts.length < 4) continue;
       const mac = normalizeMac(parts[3]);
-      if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) continue;
+      if (!mac) continue;
       devices.push({
         mac,
         name: parts[2] || parts[1] || mac,
@@ -91,25 +152,43 @@ export class NetgearAdapter {
   }
 
   async blockDevice({ mac }) {
-    await this.authenticate();
-    const upperMac = normalizeMac(mac).toUpperCase();
-    await this._soap(
-      'DeviceConfig',
-      'SetBlockDeviceByMAC',
-      `<NewAllowOrBlock>Block</NewAllowOrBlock><NewMACAddress>${upperMac}</NewMACAddress>`
-    );
-    return { ok: true, mode: 'netgear-soap', detail: `Blocked ${upperMac} via Netgear SOAP` };
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return { ok: false, mode: 'netgear-soap', detail: 'Invalid MAC address' };
+    try {
+      const auth = await this.authenticate();
+      if (!auth.ok) return { ok: false, mode: 'netgear-soap', detail: auth.reason };
+      const upperMac = cleanMac.toUpperCase();
+      const xml = await this._soap(
+        'DeviceConfig',
+        'SetBlockDeviceByMAC',
+        `<NewAllowOrBlock>Block</NewAllowOrBlock><NewMACAddress>${upperMac}</NewMACAddress>`
+      );
+      const soapErr = getSoapError(xml);
+      if (soapErr) return { ok: false, mode: 'netgear-soap', detail: soapErr };
+      return { ok: true, mode: 'netgear-soap', detail: `Blocked ${upperMac} via Netgear SOAP` };
+    } catch (err) {
+      return { ok: false, mode: 'netgear-soap', detail: err.message };
+    }
   }
 
   async unblockDevice({ mac }) {
-    await this.authenticate();
-    const upperMac = normalizeMac(mac).toUpperCase();
-    await this._soap(
-      'DeviceConfig',
-      'SetBlockDeviceByMAC',
-      `<NewAllowOrBlock>Allow</NewAllowOrBlock><NewMACAddress>${upperMac}</NewMACAddress>`
-    );
-    return { ok: true, mode: 'netgear-soap', detail: `Unblocked ${upperMac} via Netgear SOAP` };
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return { ok: false, mode: 'netgear-soap', detail: 'Invalid MAC address' };
+    try {
+      const auth = await this.authenticate();
+      if (!auth.ok) return { ok: false, mode: 'netgear-soap', detail: auth.reason };
+      const upperMac = cleanMac.toUpperCase();
+      const xml = await this._soap(
+        'DeviceConfig',
+        'SetBlockDeviceByMAC',
+        `<NewAllowOrBlock>Allow</NewAllowOrBlock><NewMACAddress>${upperMac}</NewMACAddress>`
+      );
+      const soapErr = getSoapError(xml);
+      if (soapErr) return { ok: false, mode: 'netgear-soap', detail: soapErr };
+      return { ok: true, mode: 'netgear-soap', detail: `Unblocked ${upperMac} via Netgear SOAP` };
+    } catch (err) {
+      return { ok: false, mode: 'netgear-soap', detail: err.message };
+    }
   }
 
   async isDeviceBlocked() {

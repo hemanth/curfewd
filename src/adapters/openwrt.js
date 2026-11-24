@@ -41,8 +41,13 @@ export class OpenWrtAdapter {
       }),
       signal: AbortSignal.timeout(8000)
     });
+    if (!res.ok) {
+      throw Object.assign(new Error(`OpenWrt ubus HTTP ${res.status}`), { status: res.status });
+    }
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message || 'ubus RPC error');
+    if (data.error) {
+      throw Object.assign(new Error(data.error.message || 'ubus RPC error'), { code: data.error.code });
+    }
     return data.result;
   }
 
@@ -58,11 +63,44 @@ export class OpenWrtAdapter {
     return { ok: true };
   }
 
+  async _ubusAuthed(object, method, params = {}) {
+    if (!this.sessionToken) {
+      const auth = await this.authenticate();
+      if (!auth.ok) throw new Error(auth.reason);
+    }
+    let result;
+    try {
+      result = await this._ubus(this.sessionToken, object, method, params);
+      if (Array.isArray(result) && result[0] === 6) {
+        this.sessionToken = null;
+        const auth = await this.authenticate();
+        if (!auth.ok) throw new Error(auth.reason);
+        result = await this._ubus(this.sessionToken, object, method, params);
+      }
+    } catch (err) {
+      if (err.status === 401 || err.status === 403 || err.code === -32002) {
+        this.sessionToken = null;
+        const auth = await this.authenticate();
+        if (!auth.ok) throw new Error(auth.reason);
+        result = await this._ubus(this.sessionToken, object, method, params);
+      } else {
+        throw err;
+      }
+    }
+    if (!Array.isArray(result) || result[0] !== 0) {
+      throw Object.assign(
+        new Error(`OpenWrt ubus call ${object}.${method} failed (code ${result?.[0]})`),
+        { ubusCode: result?.[0] }
+      );
+    }
+    return result;
+  }
+
   async testConnection() {
     try {
       const auth = await this.authenticate();
       if (!auth.ok) return { ok: false, model: 'OpenWrt', detail: auth.reason };
-      const [, info] = await this._ubus(this.sessionToken, 'system', 'board', {});
+      const [, info] = await this._ubusAuthed('system', 'board', {});
       const model = info?.model || 'OpenWrt Router';
       return { ok: true, model, detail: `Connected to ${model} (${info?.release?.description || 'OpenWrt'})` };
     } catch (err) {
@@ -71,11 +109,11 @@ export class OpenWrtAdapter {
   }
 
   async listDevices() {
-    if (!this.sessionToken) await this.authenticate();
-    const [, hints] = await this._ubus(this.sessionToken, 'luci-rpc', 'getHostHints', {});
+    const [, hints] = await this._ubusAuthed('luci-rpc', 'getHostHints', {});
     const devices = [];
     for (const [rawMac, info] of Object.entries(hints || {})) {
       const mac = normalizeMac(rawMac);
+      if (!mac) continue;
       devices.push({
         mac,
         name: info.name || info.ipaddrs?.[0] || `Host ${mac.slice(-5)}`,
@@ -95,44 +133,52 @@ export class OpenWrtAdapter {
   }
 
   async blockDevice({ mac }) {
-    const auth = await this.authenticate();
-    if (!auth.ok) return { ok: false, mode: 'openwrt', detail: auth.reason };
     const cleanMac = normalizeMac(mac);
-    const name = this._ruleName(cleanMac);
-    await this._ubus(this.sessionToken, 'uci', 'add', {
-      config: 'firewall',
-      type: 'rule',
-      name,
-      values: {
+    if (!cleanMac) return { ok: false, mode: 'openwrt', detail: 'Invalid MAC address' };
+    try {
+      const name = this._ruleName(cleanMac);
+      await this._ubusAuthed('uci', 'add', {
+        config: 'firewall',
+        type: 'rule',
         name,
-        src: 'lan',
-        dest: 'wan',
-        src_mac: cleanMac,
-        target: 'REJECT',
-        enabled: '1'
-      }
-    });
-    await this._ubus(this.sessionToken, 'uci', 'commit', { config: 'firewall' });
-    await this._ubus(this.sessionToken, 'file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] }).catch(() => {});
-    return { ok: true, mode: 'openwrt-uci-firewall', detail: `Added UCI firewall REJECT rule ${name}` };
+        values: {
+          name,
+          src: 'lan',
+          dest: 'wan',
+          src_mac: cleanMac,
+          target: 'REJECT',
+          enabled: '1'
+        }
+      });
+      await this._ubusAuthed('uci', 'commit', { config: 'firewall' });
+      await this._ubusAuthed('file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] }).catch(() => {});
+      return { ok: true, mode: 'openwrt-uci-firewall', detail: `Added UCI firewall REJECT rule ${name}` };
+    } catch (err) {
+      return { ok: false, mode: 'openwrt', detail: err.message };
+    }
   }
 
   async unblockDevice({ mac }) {
-    const auth = await this.authenticate();
-    if (!auth.ok) return { ok: false, mode: 'openwrt', detail: auth.reason };
-    const name = this._ruleName(mac);
-    await this._ubus(this.sessionToken, 'uci', 'delete', { config: 'firewall', section: name }).catch(() => {});
-    await this._ubus(this.sessionToken, 'uci', 'commit', { config: 'firewall' });
-    await this._ubus(this.sessionToken, 'file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] }).catch(() => {});
-    return { ok: true, mode: 'openwrt-uci-firewall', detail: `Removed UCI firewall rule ${name}` };
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return { ok: false, mode: 'openwrt', detail: 'Invalid MAC address' };
+    try {
+      const name = this._ruleName(cleanMac);
+      await this._ubusAuthed('uci', 'delete', { config: 'firewall', section: name }).catch(() => {});
+      await this._ubusAuthed('uci', 'commit', { config: 'firewall' });
+      await this._ubusAuthed('file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] }).catch(() => {});
+      return { ok: true, mode: 'openwrt-uci-firewall', detail: `Removed UCI firewall rule ${name}` };
+    } catch (err) {
+      return { ok: false, mode: 'openwrt', detail: err.message };
+    }
   }
 
   async isDeviceBlocked({ mac }) {
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return false;
     try {
-      if (!this.sessionToken) await this.authenticate();
-      const [, res] = await this._ubus(this.sessionToken, 'uci', 'get', {
+      const [, res] = await this._ubusAuthed('uci', 'get', {
         config: 'firewall',
-        section: this._ruleName(mac)
+        section: this._ruleName(cleanMac)
       });
       return Boolean(res?.values);
     } catch {

@@ -12,10 +12,18 @@ export function resolveHomeDir(overrideDir) {
 
 export function normalizeMac(mac) {
   if (!mac || typeof mac !== 'string') return '';
-  const cleaned = mac.trim().toLowerCase().replace(/-/g, ':');
-  const parts = cleaned.split(':');
-  if (parts.length !== 6) return cleaned;
-  return parts.map((p) => p.padStart(2, '0')).join(':');
+  const trimmed = mac.trim().toLowerCase();
+  if (/^[0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}$/.test(trimmed)) {
+    return trimmed.replace(/\./g, '').match(/.{2}/g).join(':');
+  }
+  if (/^([0-9a-f]{1,2})([:-])(?:[0-9a-f]{1,2}\2){4}[0-9a-f]{1,2}$/.test(trimmed)) {
+    return trimmed.replace(/-/g, ':').split(':').map((p) => p.padStart(2, '0')).join(':');
+  }
+  return '';
+}
+
+export function isValidMac(mac) {
+  return normalizeMac(mac) !== '';
 }
 
 export function todayKey(date = new Date()) {
@@ -61,6 +69,9 @@ export function createInitialState() {
       gatewayUrl: 'http://192.168.1.1',
       username: '',
       password: '',
+      blockCmd: '',
+      unblockCmd: '',
+      listCmd: '',
       pollIntervalSec: 60
     },
     dns: {
@@ -78,6 +89,9 @@ export function createInitialState() {
     schedules: [],
     blockedCategories: [],
     blockedDomains: [],
+    customBlockedDomains: [],
+    enforcedBlocks: [],
+    pendingUnblockMacs: [],
     auditLog: []
   };
 }
@@ -94,27 +108,92 @@ export class StateStore {
     }
     if (!fs.existsSync(this.stateFile)) {
       const initial = createInitialState();
-      fs.writeFileSync(this.stateFile, JSON.stringify(initial, null, 2), { mode: 0o600 });
+      const tmp = `${this.stateFile}.${process.pid}.init.tmp`;
+      try {
+        fs.writeFileSync(tmp, JSON.stringify(initial, null, 2), { mode: 0o600 });
+        if (!fs.existsSync(this.stateFile)) {
+          fs.renameSync(tmp, this.stateFile);
+        } else {
+          try { fs.unlinkSync(tmp); } catch {}
+        }
+      } catch (err) {
+        try { fs.unlinkSync(tmp); } catch {}
+        if (!fs.existsSync(this.stateFile)) throw err;
+      }
     }
   }
 
   load() {
     this.ensure();
-    const raw = JSON.parse(fs.readFileSync(this.stateFile, 'utf8'));
+    const text = fs.readFileSync(this.stateFile, 'utf8');
+    let raw;
+    let corrupt = false;
+    try {
+      raw = JSON.parse(text);
+    } catch {
+      corrupt = true;
+    }
+    if (!corrupt && (!raw || typeof raw !== 'object' || Array.isArray(raw))) {
+      corrupt = true;
+    }
+    if (corrupt) {
+      if (text.trim().length > 0) {
+        const backupPath = `${this.stateFile}.corrupt.${Date.now()}`;
+        try {
+          fs.writeFileSync(backupPath, text, { mode: 0o600 });
+        } catch {}
+      }
+      console.warn('[curfewd] Corrupt or invalid state.json detected; resetting to initial state');
+      const initial = createInitialState();
+      this.save(initial);
+      return initial;
+    }
+
     const base = createInitialState();
+    const rawAliases = raw.aliases && typeof raw.aliases === 'object' && !Array.isArray(raw.aliases) ? raw.aliases : {};
+    const aliases = {};
+    for (const [k, v] of Object.entries(rawAliases)) {
+      const nk = normalizeMac(k);
+      if (nk && v) aliases[nk] = String(v);
+    }
+    const rawPaused = raw.pausedDevices && typeof raw.pausedDevices === 'object' && !Array.isArray(raw.pausedDevices) ? raw.pausedDevices : {};
+    const pausedDevices = {};
+    for (const [k, v] of Object.entries(rawPaused)) {
+      const nk = normalizeMac(k);
+      if (nk && v && typeof v === 'object') {
+        pausedDevices[nk] = { ...v, mac: nk };
+      }
+    }
+    const blockedDomains = Array.isArray(raw.blockedDomains) ? raw.blockedDomains : [];
+    const customFromRaw = Array.isArray(raw.customBlockedDomains)
+      ? raw.customBlockedDomains.map((d) => String(d).toLowerCase().trim()).filter(Boolean)
+      : [];
+    const customFromBlocked = blockedDomains
+      .filter((d) => d && (d.category === 'custom' || d.custom) && d.domain)
+      .map((d) => String(d.domain).toLowerCase().trim())
+      .filter(Boolean);
+    const customBlockedDomains = [...new Set([...customFromRaw, ...customFromBlocked])];
+
+    const rawRouter = raw.router && typeof raw.router === 'object' && !Array.isArray(raw.router) ? raw.router : {};
+    const rawDns = raw.dns && typeof raw.dns === 'object' && !Array.isArray(raw.dns) ? raw.dns : {};
+    const rawWeb = raw.web && typeof raw.web === 'object' && !Array.isArray(raw.web) ? raw.web : {};
+
     const state = {
       ...base,
       ...raw,
-      router: { ...base.router, ...(raw.router || {}) },
-      dns: { ...base.dns, ...(raw.dns || {}) },
-      web: { ...base.web, ...(raw.web || {}) },
-      aliases: raw.aliases || {},
-      pinnedMacs: Array.isArray(raw.pinnedMacs) ? raw.pinnedMacs.map(normalizeMac) : [],
-      pausedDevices: raw.pausedDevices || {},
+      router: { ...base.router, ...rawRouter },
+      dns: { ...base.dns, ...rawDns },
+      web: { ...base.web, ...rawWeb },
+      aliases,
+      pinnedMacs: Array.isArray(raw.pinnedMacs) ? [...new Set(raw.pinnedMacs.map(normalizeMac).filter(Boolean))] : [],
+      pausedDevices,
       quotas: Array.isArray(raw.quotas) ? raw.quotas : [],
       schedules: Array.isArray(raw.schedules) ? raw.schedules : [],
-      blockedCategories: Array.isArray(raw.blockedCategories) ? raw.blockedCategories : [],
-      blockedDomains: Array.isArray(raw.blockedDomains) ? raw.blockedDomains : [],
+      blockedCategories: Array.isArray(raw.blockedCategories) ? [...new Set(raw.blockedCategories)] : [],
+      blockedDomains,
+      customBlockedDomains,
+      enforcedBlocks: Array.isArray(raw.enforcedBlocks) ? [...new Set(raw.enforcedBlocks.map(normalizeMac).filter(Boolean))] : [],
+      pendingUnblockMacs: Array.isArray(raw.pendingUnblockMacs) ? [...new Set(raw.pendingUnblockMacs.map(normalizeMac).filter(Boolean))] : [],
       auditLog: Array.isArray(raw.auditLog) ? raw.auditLog : []
     };
     return state;
@@ -131,9 +210,14 @@ export class StateStore {
         }
       }
     }
-    const tmp = `${this.stateFile}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(state, null, 2), { mode: 0o600 });
-    fs.renameSync(tmp, this.stateFile);
+    const tmp = `${this.stateFile}.${process.pid}.tmp`;
+    try {
+      fs.writeFileSync(tmp, JSON.stringify(state, null, 2), { mode: 0o600 });
+      fs.renameSync(tmp, this.stateFile);
+    } catch (err) {
+      try { fs.unlinkSync(tmp); } catch {}
+      throw err;
+    }
     return state;
   }
 

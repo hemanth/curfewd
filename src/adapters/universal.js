@@ -19,89 +19,109 @@ export const UNIVERSAL_META = {
   }
 };
 
+function isMulticastOrBroadcastMac(mac) {
+  return mac === 'ff:ff:ff:ff:ff:ff' || mac.startsWith('01:00:5e') || mac.startsWith('33:33:');
+}
+
+export function parseArpOutput(stdout, byMac = new Map()) {
+  for (const line of String(stdout || '').split('\n')) {
+    const m = line.match(/^(\S+)\s+\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([0-9a-f:]{11,17})(?:\s+\[[^\]]+\])?\s+on\s+(\S+)/i);
+    if (!m) continue;
+    const hostHint = m[1] !== '?' ? m[1] : null;
+    const ipv4 = m[2];
+    const mac = normalizeMac(m[3]);
+    if (!mac || isMulticastOrBroadcastMac(mac)) continue;
+    byMac.set(mac, {
+      mac,
+      name: hostHint || `LAN Host (${ipv4})`,
+      ipv4,
+      ipv6: null,
+      ipv6List: [],
+      status: 'online',
+      band: `LAN (${m[4]})`,
+      lastActivity: 'Active in ARP cache'
+    });
+  }
+  return byMac;
+}
+
+export function parseIpNeighOutput(stdout, byMac = new Map()) {
+  for (const line of String(stdout || '').split('\n')) {
+    const m = line.match(/^(\S+)\s+dev\s+(\S+)\s+lladdr\s+([0-9a-f:]{11,17})(?:.*\s+(\S+))?/i);
+    if (!m) continue;
+    const ip = m[1];
+    const dev = m[2];
+    const mac = normalizeMac(m[3]);
+    const state = (m[4] || 'UNKNOWN').toUpperCase();
+    if (!mac || isMulticastOrBroadcastMac(mac)) continue;
+    const isV6 = ip.includes(':');
+    const existing = byMac.get(mac) || {
+      mac,
+      name: `LAN Host (${ip})`,
+      ipv4: null,
+      ipv6: null,
+      ipv6List: [],
+      status: state === 'REACHABLE' || state === 'DELAY' ? 'online' : 'offline',
+      band: `LAN (${dev})`,
+      lastActivity: `Neighbor ${state}`
+    };
+    if (isV6) {
+      const lowerIp = ip.toLowerCase();
+      if (!existing.ipv6List.includes(lowerIp)) existing.ipv6List.push(lowerIp);
+      if (!existing.ipv6 || existing.ipv6.startsWith('fe80:')) existing.ipv6 = lowerIp;
+    } else {
+      existing.ipv4 = ip;
+    }
+    byMac.set(mac, existing);
+  }
+  return byMac;
+}
+
+export function parseNdpOutput(stdout, byMac = new Map()) {
+  for (const line of String(stdout || '').split('\n')) {
+    const m = line.match(/^([0-9a-f:]+(?:%\S+)?)\s+([0-9a-f:]{11,17})\s+(\S+)\s+(\S+)\s+([RSPDHA]+)/i);
+    if (!m) continue;
+    const ipv6 = m[1].replace(/%\S+$/, '').toLowerCase();
+    const mac = normalizeMac(m[2]);
+    if (!mac || isMulticastOrBroadcastMac(mac)) continue;
+    const existing = byMac.get(mac) || {
+      mac,
+      name: `IPv6 Host (${mac.slice(-5)})`,
+      ipv4: null,
+      ipv6,
+      ipv6List: [],
+      status: 'online',
+      band: `LAN (${m[3]})`,
+      lastActivity: 'Active in NDP cache'
+    };
+    if (!existing.ipv6List.includes(ipv6)) existing.ipv6List.push(ipv6);
+    if (!existing.ipv6 || existing.ipv6.startsWith('fe80:')) existing.ipv6 = ipv6;
+    byMac.set(mac, existing);
+  }
+  return byMac;
+}
+
 export async function scanArpNdpDevices() {
   const byMac = new Map();
 
   // IPv4 ARP table (macOS + Linux)
   try {
     const { stdout } = await execFileAsync('arp', ['-an'], { timeout: 3000 });
-    for (const line of stdout.split('\n')) {
-      const m = line.match(/^(\S+)\s+\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([0-9a-f:]{11,17})\s+on\s+(\S+)/i);
-      if (!m) continue;
-      const hostHint = m[1] !== '?' ? m[1] : null;
-      const ipv4 = m[2];
-      const mac = normalizeMac(m[3]);
-      if (!mac || mac === 'ff:ff:ff:ff:ff:ff' || mac.startsWith('01:00:5e')) continue;
-      byMac.set(mac, {
-        mac,
-        name: hostHint || `LAN Host (${ipv4})`,
-        ipv4,
-        ipv6: null,
-        ipv6List: [],
-        status: 'online',
-        band: `LAN (${m[4]})`,
-        lastActivity: 'Active in ARP cache'
-      });
-    }
+    parseArpOutput(stdout, byMac);
   } catch {}
 
   // Linux fallback: ip neigh show
   if (byMac.size === 0) {
     try {
       const { stdout } = await execFileAsync('ip', ['neigh', 'show'], { timeout: 3000 });
-      for (const line of stdout.split('\n')) {
-        const m = line.match(/^(\S+)\s+dev\s+(\S+)\s+lladdr\s+([0-9a-f:]{17})\s+(\S+)/i);
-        if (!m) continue;
-        const ip = m[1];
-        const dev = m[2];
-        const mac = normalizeMac(m[3]);
-        const state = m[4].toUpperCase();
-        if (mac === 'ff:ff:ff:ff:ff:ff') continue;
-        const isV6 = ip.includes(':');
-        const existing = byMac.get(mac) || {
-          mac,
-          name: `LAN Host (${ip})`,
-          ipv4: null,
-          ipv6: null,
-          ipv6List: [],
-          status: state === 'REACHABLE' || state === 'DELAY' ? 'online' : 'offline',
-          band: `LAN (${dev})`,
-          lastActivity: `Neighbor ${state}`
-        };
-        if (isV6) {
-          existing.ipv6List.push(ip.toLowerCase());
-          if (!existing.ipv6 || existing.ipv6.startsWith('fe80:')) existing.ipv6 = ip.toLowerCase();
-        } else {
-          existing.ipv4 = ip;
-        }
-        byMac.set(mac, existing);
-      }
+      parseIpNeighOutput(stdout, byMac);
     } catch {}
   }
 
   // macOS IPv6 NDP enrichment
   try {
     const { stdout } = await execFileAsync('ndp', ['-an'], { timeout: 3000 });
-    for (const line of stdout.split('\n')) {
-      const m = line.match(/^([0-9a-f:]+(?:%\S+)?)\s+([0-9a-f:]{11,17})\s+(\S+)\s+(\S+)\s+([RSPDHA]+)/i);
-      if (!m) continue;
-      const ipv6 = m[1].replace(/%\S+$/, '').toLowerCase();
-      const mac = normalizeMac(m[2]);
-      if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) continue;
-      const existing = byMac.get(mac) || {
-        mac,
-        name: `IPv6 Host (${mac.slice(-5)})`,
-        ipv4: null,
-        ipv6,
-        ipv6List: [],
-        status: 'online',
-        band: `LAN (${m[3]})`,
-        lastActivity: 'Active in NDP cache'
-      };
-      if (!existing.ipv6List.includes(ipv6)) existing.ipv6List.push(ipv6);
-      if (!existing.ipv6 || existing.ipv6.startsWith('fe80:')) existing.ipv6 = ipv6;
-      byMac.set(mac, existing);
-    }
+    parseNdpOutput(stdout, byMac);
   } catch {}
 
   return [...byMac.values()];
@@ -128,18 +148,26 @@ export class UniversalAdapter {
   }
 
   async blockDevice({ mac }) {
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) {
+      return { ok: false, mode: 'dns-sinkhole', detail: 'Invalid MAC address' };
+    }
     return {
       ok: true,
       mode: 'dns-sinkhole',
-      detail: `MAC ${normalizeMac(mac)} enforced via local DNS sinkhole (0.0.0.0 / ::)`
+      detail: `MAC ${cleanMac} enforced via local DNS sinkhole (0.0.0.0 / ::)`
     };
   }
 
   async unblockDevice({ mac }) {
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) {
+      return { ok: false, mode: 'dns-sinkhole', detail: 'Invalid MAC address' };
+    }
     return {
       ok: true,
       mode: 'dns-sinkhole',
-      detail: `MAC ${normalizeMac(mac)} released from local DNS sinkhole`
+      detail: `MAC ${cleanMac} released from local DNS sinkhole`
     };
   }
 

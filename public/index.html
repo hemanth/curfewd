@@ -8,16 +8,28 @@
   <style>
     :root {
       --bg: #fbfaf7;
+      --surface: #f5f4f0;
+      --track: #eeece5;
       --card: #ffffff;
       --ink: #141414;
       --muted: #66635c;
       --line: #e4e1d8;
+      --line-strong: #cfcabd;
       --accent: #141414;
       --ok: #15803d;
+      --ok-bg: #f0fdf4;
+      --ok-line: #bbf7d0;
       --warn: #b45309;
+      --warn-bg: #fffbeb;
+      --warn-line: #fde68a;
       --danger: #b91c1c;
+      --danger-bg: #fef2f2;
+      --danger-line: #fecaca;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --radius-card: 10px;
+      --radius-ctrl: 7px;
+      --radius-pill: 99px;
     }
     * { box-sizing: border-box; }
     body {
@@ -25,76 +37,305 @@
       background: var(--bg);
       color: var(--ink);
       font-family: var(--sans);
+      font-size: 14px;
       line-height: 1.45;
       -webkit-font-smoothing: antialiased;
     }
     header {
       position: sticky;
       top: 0;
-      z-index: 10;
-      background: rgba(251, 250, 247, 0.9);
+      z-index: 20;
+      background: rgba(251, 250, 247, 0.94);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--line);
-      padding: 14px 24px;
+      padding: 12px 24px;
+    }
+    .header-inner {
+      max-width: 1032px;
+      margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px 16px;
+      flex-wrap: wrap;
     }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; font-size: 17px; }
-    .brand code { font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); color: var(--muted); }
-    .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: var(--ink);
+      color: var(--bg);
+      flex-shrink: 0;
+    }
+    .brand-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .brand code {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      background: var(--card);
+      color: var(--muted);
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .nav {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       border: 1px solid var(--line);
       background: var(--card);
       color: var(--ink);
-      padding: 6px 12px;
-      border-radius: 7px;
+      padding: 7px 12px;
+      min-height: 36px;
+      border-radius: var(--radius-ctrl);
       font-size: 13px;
       font-weight: 500;
+      font-family: inherit;
       cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
     }
-    .tab-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
-    main { max-width: 1080px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .tab-btn:hover { border-color: var(--line-strong); background: var(--surface); }
+    .tab-btn.active { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px 24px 32px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
     .card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: var(--radius-card);
       padding: 18px;
+      min-width: 0;
     }
-    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-    .stat-val { font-size: 24px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
-    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
-    h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .stack-gap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+    .stat-card { padding: 15px 16px; }
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .stat-val {
+      font-size: 23px;
+      font-weight: 700;
+      margin-top: 4px;
+      letter-spacing: -0.02em;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+      font-family: var(--mono);
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      flex-wrap: wrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .card-title-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .card-head-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .sub-section {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      min-width: 0;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 14px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      flex-wrap: wrap;
+      min-width: 0;
+    }
     .row:first-of-type { border-top: none; }
-    .mono { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-    .pill {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 11px; font-family: var(--mono); font-weight: 600;
-      padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line);
+    .row-compact { padding: 8px 0; }
+    .row-main {
+      flex: 1 1 220px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    .pill.online { color: var(--ok); border-color: #bbf7d0; background: #f0fdf4; }
-    .pill.offline { color: var(--muted); background: #f5f4f0; }
-    .pill.blocked { color: var(--danger); border-color: #fecaca; background: #fef2f2; }
+    .row-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .mono {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-family: var(--mono);
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .pill.online { color: var(--ok); border-color: var(--ok-line); background: var(--ok-bg); }
+    .pill.offline { color: var(--muted); border-color: var(--line); background: var(--surface); }
+    .pill.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
+    .pill.blocked { color: var(--danger); border-color: var(--danger-line); background: var(--danger-bg); }
+
+    .banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-ctrl);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 12.5px;
+      margin-bottom: 12px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .banner.ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-bg); }
+    .banner.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
+    .banner.danger { color: var(--danger); border-color: var(--danger-line); background: var(--danger-bg); }
+    .banner svg { flex-shrink: 0; margin-top: 2px; }
+
     button.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       border: 1px solid var(--line);
       background: var(--card);
       color: var(--ink);
       padding: 6px 11px;
+      min-height: 36px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 12.5px;
       font-weight: 500;
+      font-family: inherit;
       cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
     }
-    button.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-    button.btn.danger { color: var(--danger); border-color: #fecaca; }
-    button.btn:hover { opacity: 0.86; }
+    button.btn:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface); }
+    button.btn.primary { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+    button.btn.primary:hover:not(:disabled) { opacity: 0.88; background: var(--ink); }
+    button.btn.danger { color: var(--danger); border-color: var(--danger-line); background: var(--card); }
+    button.btn.danger:hover:not(:disabled) { background: var(--danger-bg); }
+    button.btn.btn-subtle { background: var(--surface); color: var(--ink); }
+    button.btn.btn-subtle[aria-pressed="true"] { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+    button.btn:disabled, .tab-btn:disabled, .chip:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 16px;
+      gap: 12px 16px;
     }
     .form-grid.cols-3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -103,10 +344,14 @@
       grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto;
       align-items: end;
     }
-    label {
+    .field {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
+      min-width: 0;
+    }
+    .field-full { grid-column: 1 / -1; }
+    label, .field-label {
       font-size: 12px;
       color: var(--muted);
       font-weight: 600;
@@ -118,148 +363,449 @@
       max-width: 100%;
       height: 38px;
       border: 1px solid var(--line);
-      border-radius: 7px;
+      border-radius: var(--radius-ctrl);
       padding: 0 11px;
       font-size: 13px;
       font-family: inherit;
       background: var(--bg);
       color: var(--ink);
       text-overflow: ellipsis;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
     }
-    input:focus, select:focus {
+    select.pause-select {
+      width: auto;
+      min-width: 112px;
+      height: 36px;
+      font-size: 12.5px;
+      padding: 0 8px;
+    }
+    input.alias-input {
+      height: 34px;
+      font-size: 13px;
+      max-width: 240px;
+    }
+    .inline-edit-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .inline-action {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+      align-items: flex-end;
+    }
+    .inline-action .field { flex: 1 1 200px; min-width: 0; }
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+    input:focus-visible,
+    select:focus-visible {
       outline: none;
       border-color: var(--ink);
-      box-shadow: 0 0 0 2px rgba(20, 20, 20, 0.12);
-      background: #fff;
+      box-shadow: 0 0 0 2px rgba(20, 20, 20, 0.14);
+      background: var(--card);
     }
-    button.btn {
-      height: 36px;
+
+    .bar-track {
+      width: 100%;
+      height: 7px;
+      background: var(--track);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .bar-fill { height: 100%; background: var(--ink); transition: width 0.25s; }
+    .bar-fill.over { background: var(--danger); }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-width: 0;
+    }
+    .chip {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      white-space: nowrap;
+      gap: 5px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--ink);
+      padding: 6px 11px;
+      min-height: 34px;
+      min-width: 0;
+      max-width: 100%;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      text-align: center;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
     }
-    @media (max-width: 720px) {
-      header { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
-      main { padding: 14px 16px 24px; gap: 14px; }
-      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .form-grid, .form-grid.cols-3, .form-grid.cols-quota { grid-template-columns: minmax(0, 1fr); }
-      .nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .row { align-items: flex-start; }
+    .chip:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface); }
+    .chip.on { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+    .chip .chip-count { opacity: 0.78; font-family: var(--mono); font-size: 11px; }
+
+    .mac-picker-wrap { margin-top: 10px; }
+    .picker-hint { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; display: block; }
+
+    .meta-box {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-ctrl);
     }
-    .bar-track { width: 100%; height: 7px; background: #eeece5; border-radius: 99px; overflow: hidden; margin-top: 6px; }
-    .bar-fill { height: 100%; background: var(--ink); transition: width 0.25s; }
-    .bar-fill.over { background: var(--danger); }
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip {
-      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-      padding: 6px 11px; border-radius: 99px; font-size: 12px; cursor: pointer;
+    .guide-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-ctrl);
     }
-    .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-    .hidden { display: none; }
+
+    .ico { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+    .hidden { display: none !important; }
+
     .toast {
-      position: fixed; bottom: 20px; right: 20px;
-      background: var(--ink); color: #fff; padding: 10px 14px;
-      border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      max-width: min(420px, calc(100vw - 32px));
+      z-index: 50;
+      background: var(--ink);
+      color: #ffffff;
+      border: 1px solid var(--ink);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(20, 20, 20, 0.16);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity 0.18s, transform 0.18s;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    .toast.show { opacity: 1; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+    .toast.warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
+    .toast.danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-line); }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid.cols-quota,
+      .form-grid.cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .header-inner { gap: 10px; }
+    }
+
+    @media (max-width: 768px) {
+      .tab-btn,
+      button.btn,
+      .chip,
+      input,
+      select {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      input, select {
+        font-size: 16px;
+        height: 44px;
+      }
+      select.pause-select {
+        height: 44px;
+        font-size: 16px;
+      }
+      input.alias-input {
+        height: 44px;
+        font-size: 16px;
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        position: static;
+        padding: 10px 14px;
+      }
+      .header-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .header-top {
+        width: 100%;
+      }
+      .header-controls {
+        width: 100%;
+      }
+      .nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        width: 100%;
+      }
+      .tab-btn {
+        width: 100%;
+        padding: 8px 8px;
+        font-size: 12.5px;
+      }
+      main {
+        padding: 12px 14px 24px;
+        gap: 12px;
+      }
+      .stats { gap: 10px; }
+      .card { padding: 14px; }
+      .stack-gap { gap: 12px; }
+      .form-grid,
+      .form-grid.cols-3,
+      .form-grid.cols-quota {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .inline-action {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .inline-action .field { flex: 1 1 auto; }
+      .row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .row-main { flex: 1 1 auto; }
+      .row-actions { width: 100%; }
+      .toast {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        max-width: none;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <span>curfewd</span>
-      <code id="adapterBadge">universal</code>
-    </div>
-    <div class="nav">
-      <button class="tab-btn active" data-tab="overview">Devices & Quotas</button>
-      <button class="tab-btn" data-tab="schedules">Bedtime</button>
-      <button class="tab-btn" data-tab="dns">DNS Sinkhole</button>
-      <button class="tab-btn" data-tab="setup">Router Setup</button>
+    <div class="header-inner">
+      <div class="header-top">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3.5v6c0 5-3.4 9-8 10.5-4.6-1.5-8-5.5-8-10.5v-6L12 3z"/></svg>
+          </span>
+          <h1 class="brand-title">curfewd</h1>
+          <code id="adapterBadge">universal</code>
+        </div>
+        <button type="button" class="btn btn-subtle" id="autoRefreshBtn" aria-pressed="true" aria-label="Toggle 15 second auto-refresh">
+          <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span id="autoRefreshLabel">Auto: On</span>
+        </button>
+      </div>
+      <div class="header-controls">
+        <nav class="nav" role="tablist" aria-label="Studio sections">
+          <button type="button" class="tab-btn active" role="tab" id="tab-btn-overview" aria-selected="true" aria-controls="tab-overview" data-tab="overview" tabindex="0">
+            <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>Devices &amp; Quotas</span>
+          </button>
+          <button type="button" class="tab-btn" role="tab" id="tab-btn-schedules" aria-selected="false" aria-controls="tab-schedules" data-tab="schedules" tabindex="-1">
+            <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Bedtime</span>
+          </button>
+          <button type="button" class="tab-btn" role="tab" id="tab-btn-dns" aria-selected="false" aria-controls="tab-dns" data-tab="dns" tabindex="-1">
+            <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>DNS Sinkhole</span>
+          </button>
+          <button type="button" class="tab-btn" role="tab" id="tab-btn-setup" aria-selected="false" aria-controls="tab-setup" data-tab="setup" tabindex="-1">
+            <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            <span>Router Setup</span>
+          </button>
+        </nav>
+      </div>
     </div>
   </header>
 
   <main>
-    <section class="stats">
-      <div class="card">
+    <div id="globalErrorBanner" class="banner danger hidden" role="alert"></div>
+
+    <section class="stats" aria-label="System summary">
+      <div class="card stat-card">
         <div class="stat-label">Router Adapter</div>
         <div class="stat-val" id="statDriver">—</div>
         <div class="stat-sub" id="statGateway">—</div>
       </div>
-      <div class="card">
+      <div class="card stat-card">
         <div class="stat-label">LAN Devices</div>
         <div class="stat-val" id="statDevices">0</div>
         <div class="stat-sub" id="statOnline">0 online</div>
       </div>
-      <div class="card">
+      <div class="card stat-card">
         <div class="stat-label">Daily Quotas</div>
         <div class="stat-val" id="statQuotas">0</div>
         <div class="stat-sub" id="statBlocked">0 blocked now</div>
       </div>
-      <div class="card">
+      <div class="card stat-card">
         <div class="stat-label">DNS Sinkhole</div>
         <div class="stat-val" id="statDns">—</div>
         <div class="stat-sub" id="statDomains">0 domains blocked</div>
       </div>
     </section>
 
-    <section id="tab-overview" class="tab-panel">
-      <div class="card" style="margin-bottom: 20px;">
+    <section id="tab-overview" class="tab-panel stack-gap" role="tabpanel" aria-labelledby="tab-btn-overview" tabindex="0">
+      <div class="card">
         <h2>
-          <span>Daily Usage Quotas</span>
+          <span class="card-title-group">Daily Usage Quotas</span>
           <span class="mono">Resets automatically at midnight</span>
         </h2>
         <div id="quotasList"></div>
-        <div class="form-grid cols-quota" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
-          <label>Group / Device Name<input id="qName" placeholder="e.g. Kids Desktop" /></label>
-          <label>MAC Address(es)<input id="qMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
-          <label>Daily Limit<input id="qLimit" value="1h30m" /></label>
-          <button class="btn primary" id="addQuotaBtn" style="height:38px;">Save Quota</button>
+        <div class="sub-section">
+          <h3 id="quotaFormTitle">Add Daily Quota</h3>
+          <div id="quotaFormError" class="banner danger hidden" role="alert"></div>
+          <div class="form-grid cols-quota">
+            <div class="field">
+              <label for="qName">Group / Device Name</label>
+              <input id="qName" type="text" placeholder="e.g. Kids Desktop" />
+            </div>
+            <div class="field">
+              <label for="qMacs">MAC Address(es)</label>
+              <input id="qMacs" type="text" placeholder="aa:bb:cc:dd:ee:ff" />
+            </div>
+            <div class="field">
+              <label for="qLimit">Daily Limit</label>
+              <input id="qLimit" type="text" value="1h30m" />
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn primary" id="addQuotaBtn">Save Quota</button>
+              <button type="button" class="btn hidden" id="cancelQuotaEditBtn">Cancel</button>
+            </div>
+          </div>
+          <div class="mac-picker-wrap">
+            <span class="picker-hint">Quick-pick discovered devices:</span>
+            <div id="qDevicePicker" class="chips mac-picker" data-mac-picker="qMacs" aria-label="Quick-pick devices for quota"></div>
+          </div>
         </div>
       </div>
 
       <div class="card">
         <h2>
-          <span>Discovered LAN Devices</span>
-          <button class="btn" id="refreshBtn">Refresh</button>
+          <span class="card-title-group">Discovered LAN Devices</span>
+          <span class="card-head-actions">
+            <span class="pill offline" id="daemonSyncPill">Sync idle</span>
+            <button type="button" class="btn" id="refreshBtn">
+              <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh</span>
+            </button>
+          </span>
         </h2>
+        <div id="overviewDeviceBanner" class="banner warn hidden" role="alert"></div>
         <div id="devicesList"></div>
       </div>
-    </section>
 
-    <section id="tab-schedules" class="tab-panel hidden">
       <div class="card">
-        <h2><span>Bedtime & Focus Schedules</span></h2>
-        <div id="schedulesList"></div>
-        <div class="form-grid" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
-          <label>Schedule Name<input id="sName" placeholder="School Night Bedtime" /></label>
-          <label>Target MAC(s)<input id="sMacs" placeholder="aa:bb:cc:dd:ee:ff" /></label>
-          <label>Start Time (24h)<input id="sStart" type="time" value="21:00" /></label>
-          <label>End Time (24h)<input id="sEnd" type="time" value="07:00" /></label>
-        </div>
-        <div style="margin-top: 12px;"><button class="btn primary" id="addSchedBtn">Save Schedule</button></div>
+        <h2>
+          <span class="card-title-group">
+            <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>Activity Log</span>
+          </span>
+          <span class="mono">Recent policy &amp; sync events</span>
+        </h2>
+        <div id="auditLogList"></div>
       </div>
     </section>
 
-    <section id="tab-dns" class="tab-panel hidden">
-      <div class="card" style="margin-bottom: 20px;">
+    <section id="tab-schedules" class="tab-panel stack-gap hidden" role="tabpanel" aria-labelledby="tab-btn-schedules" tabindex="0" hidden>
+      <div class="card">
+        <h2><span>Bedtime &amp; Focus Schedules</span></h2>
+        <div id="schedulesList"></div>
+        <div class="sub-section">
+          <h3 id="schedFormTitle">Add Bedtime Schedule</h3>
+          <div id="schedFormError" class="banner danger hidden" role="alert"></div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="sName">Schedule Name</label>
+              <input id="sName" type="text" placeholder="School Night Bedtime" />
+            </div>
+            <div class="field">
+              <label for="sMacs">Target MAC(s)</label>
+              <input id="sMacs" type="text" placeholder="aa:bb:cc:dd:ee:ff" />
+            </div>
+            <div class="field field-full">
+              <span class="field-label">Active Days</span>
+              <div id="schedDays" class="chips" role="group" aria-label="Schedule days"></div>
+            </div>
+            <div class="field">
+              <label for="sStart">Start Time (24h)</label>
+              <input id="sStart" type="time" value="21:00" />
+            </div>
+            <div class="field">
+              <label for="sEnd">End Time (24h)</label>
+              <input id="sEnd" type="time" value="07:00" />
+            </div>
+          </div>
+          <div class="mac-picker-wrap">
+            <span class="picker-hint">Quick-pick discovered devices:</span>
+            <div id="sDevicePicker" class="chips mac-picker" data-mac-picker="sMacs" aria-label="Quick-pick devices for schedule"></div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn primary" id="addSchedBtn">Save Schedule</button>
+            <button type="button" class="btn hidden" id="cancelSchedEditBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-dns" class="tab-panel stack-gap hidden" role="tabpanel" aria-labelledby="tab-btn-dns" tabindex="0" hidden>
+      <div class="card">
         <h2>
           <span>Category Blocklists</span>
           <span class="mono" id="dnsEndpoint">—</span>
         </h2>
+        <div id="dnsStatusBanner" class="banner hidden" role="status" aria-live="polite"></div>
         <div class="chips" id="catChips"></div>
-        <div class="form-grid" style="margin-top: 16px; align-items: end;">
-          <div style="display:flex; gap:8px; align-items:flex-end;">
-            <label style="flex:1;">Block Custom Domain<input id="customDomain" placeholder="example.com" /></label>
-            <button class="btn primary" id="blockDomainBtn" style="height:38px;">Block</button>
+        <div id="dnsFormError" class="banner danger hidden" role="alert" style="margin-top: 12px; margin-bottom: 0;"></div>
+        <div class="form-grid sub-section" style="align-items: end;">
+          <div class="inline-action">
+            <div class="field">
+              <label for="customDomain">Block Custom Domain</label>
+              <input id="customDomain" type="text" placeholder="example.com" />
+            </div>
+            <button type="button" class="btn primary" id="blockDomainBtn">Block</button>
           </div>
-          <div style="display:flex; gap:8px; align-items:flex-end;">
-            <label style="flex:1;">Verify Sinkhole Live<input id="testDomain" value="roblox.com" /></label>
-            <button class="btn" id="testDnsBtn" style="height:38px;">Run UDP Test</button>
+          <div class="inline-action">
+            <div class="field">
+              <label for="testDomain">Verify Sinkhole Live</label>
+              <input id="testDomain" type="text" value="roblox.com" />
+            </div>
+            <button type="button" class="btn" id="testDnsBtn">Run UDP Test</button>
           </div>
         </div>
-        <div id="dnsTestOut" class="mono" style="margin-top: 10px;"></div>
+        <div id="dnsTestOut" class="mono" role="status" aria-live="polite" style="margin-top: 10px;"></div>
+        <div class="sub-section">
+          <h3>Custom Blocked Domains</h3>
+          <div id="customDomainsList"></div>
+        </div>
       </div>
       <div class="card">
         <h2><span>Recent DNS Queries</span></h2>
@@ -267,274 +813,1397 @@
       </div>
     </section>
 
-    <section id="tab-setup" class="tab-panel hidden">
+    <section id="tab-setup" class="tab-panel stack-gap hidden" role="tabpanel" aria-labelledby="tab-btn-setup" tabindex="0" hidden>
       <div class="card">
         <h2>
-          <span>Any-Router Setup Wizard</span>
-          <button class="btn" id="detectBtn">Auto-Detect My Router</button>
+          <span class="card-title-group">
+            <span>Any-Router Setup Wizard</span>
+            <span id="setupDirtyBadge" class="pill warn hidden">Unsaved changes</span>
+          </span>
+          <button type="button" class="btn" id="detectBtn">
+            <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+            <span>Auto-Detect My Router</span>
+          </button>
         </h2>
-        <p class="mono" id="detectHint" style="margin: 0 0 14px;">Select your router or use Universal mode (works on any router without a password).</p>
+        <p class="mono" id="detectHint" style="margin: 0 0 12px;">Select your router or use Universal mode (works on any router without a password).</p>
+        <div id="setupFormError" class="banner danger hidden" role="alert"></div>
         <div class="form-grid">
-          <label>Router Adapter<select id="setupDriver"></select></label>
-          <label>Gateway URL<input id="setupGateway" placeholder="http://192.168.1.1" /></label>
-          <label>Username (if required)<input id="setupUser" placeholder="admin / root" /></label>
-          <label>Password / Access Code<input id="setupPass" type="password" placeholder="Optional for Universal mode" /></label>
+          <div class="field">
+            <label for="setupDriver">Router Adapter</label>
+            <select id="setupDriver"></select>
+          </div>
+          <div class="field">
+            <label for="setupGateway" id="setupGatewayLabel">Gateway URL</label>
+            <input id="setupGateway" type="text" placeholder="http://192.168.1.1" />
+          </div>
+          <div class="field" id="setupUserWrap">
+            <label for="setupUser" id="setupUserLabel">Username</label>
+            <input id="setupUser" type="text" placeholder="admin / root" />
+          </div>
+          <div class="field" id="setupPassWrap">
+            <label for="setupPass" id="setupPassLabel">Password / Access Code</label>
+            <input id="setupPass" type="password" placeholder="Router password or access code" />
+          </div>
+          <div class="field">
+            <label for="setupPollInterval">Daemon Poll Interval (5–3600 sec)</label>
+            <input id="setupPollInterval" name="pollIntervalSec" type="number" min="5" max="3600" step="1" value="60" />
+          </div>
         </div>
-        <div id="universalGuide" class="mono" style="margin-top: 12px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px;">
+        <div id="adapterMetaBox" class="meta-box"></div>
+        <div id="universalGuide" class="guide-box mono">
           Universal mode works on any router (eero, Nest WiFi, Xfinity, Spectrum, Orbi, Verizon) with zero password. Point your router DHCP DNS or child device DNS to <strong id="guideDnsIp">—</strong> (run <code>sudo curfewd serve --dns-port 53</code> for standard port 53).
         </div>
-        <div id="customHooksBox" class="form-grid hidden" style="margin-top: 12px;">
-          <label>Block Shell Command ({{mac}}, {{ip}})<input id="setupBlockCmd" placeholder="ssh router 'nft add element ... {{mac}}'" /></label>
-          <label>Unblock Shell Command ({{mac}}, {{ip}})<input id="setupUnblockCmd" placeholder="ssh router 'nft delete element ... {{mac}}'" /></label>
+        <div id="customHooksBox" class="form-grid cols-3 hidden" style="margin-top: 12px;">
+          <div class="field">
+            <label for="setupBlockCmd">Block Command ({{mac}}, {{ip}})</label>
+            <input id="setupBlockCmd" name="blockCmd" type="text" placeholder="ssh router 'nft add element ... {{mac}}'" />
+          </div>
+          <div class="field">
+            <label for="setupUnblockCmd">Unblock Command ({{mac}}, {{ip}})</label>
+            <input id="setupUnblockCmd" name="unblockCmd" type="text" placeholder="ssh router 'nft delete element ... {{mac}}'" />
+          </div>
+          <div class="field">
+            <label for="setupListCmd">List Devices Command (JSON)</label>
+            <input id="setupListCmd" name="listCmd" type="text" placeholder="ssh router 'cat /tmp/dhcp.leases'" />
+          </div>
         </div>
-        <div style="margin-top: 14px; display: flex; gap: 10px; align-items: center;">
-          <button class="btn primary" id="saveSetupBtn">Test Connection & Save</button>
-          <span class="mono" id="setupResult"></span>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="saveSetupBtn">Test Connection &amp; Save</button>
+          <button type="button" class="btn" id="resetSetupBtn">Reset</button>
+          <span class="mono" id="setupResult" role="status" aria-live="polite"></span>
         </div>
       </div>
     </section>
   </main>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script>
-    let appData = null;
+    const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const DEFAULT_SCHED_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
 
-    function toast(msg) {
+    let appData = null;
+    let toastTimer = null;
+    let setupHydrated = false;
+    let setupDirty = false;
+    let autoRefreshEnabled = true;
+    let loadInFlight = false;
+    let loadPromise = null;
+    let loadQueued = false;
+    let loadQueuedSilent = true;
+    let mutationSeq = 0;
+    let editingQuotaId = null;
+    let editingScheduleId = null;
+    let selectedSchedDays = new Set(DEFAULT_SCHED_DAYS);
+    let editingAliasMac = null;
+    let editingAliasValue = '';
+    let editingAliasPinned = false;
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function svgIcon(name, size = 14) {
+      const paths = {
+        plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+        reset: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+        edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+        trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+        pause: '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
+        play: '<polygon points="5 3 19 12 5 21 5 3"/>',
+        pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+        check: '<polyline points="20 6 9 17 4 12"/>',
+        x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+        alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+      };
+      const inner = paths[name] || '';
+      return `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+    }
+
+    function toast(msg, tone = 'ok') {
       const el = document.getElementById('toast');
+      if (toastTimer) clearTimeout(toastTimer);
+      el.className = `toast ${tone} show`;
       el.textContent = msg;
-      el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 2400);
+      toastTimer = setTimeout(() => {
+        el.classList.remove('show');
+        toastTimer = null;
+      }, 2800);
+    }
+
+    function showBanner(el, msg, tone = 'danger') {
+      if (!el) return;
+      if (!msg) {
+        el.className = `banner ${tone} hidden`;
+        el.textContent = '';
+        return;
+      }
+      el.className = `banner ${tone}`;
+      el.innerHTML = `${svgIcon(tone === 'ok' ? 'check' : 'alert', 14)}<span>${escapeHtml(msg)}</span>`;
     }
 
     async function api(path, opts = {}) {
+      const method = String(opts.method || 'GET').toUpperCase();
+      if (method !== 'GET' && method !== 'HEAD') {
+        mutationSeq++;
+      }
       const res = await fetch(path, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
         ...opts,
-        body: opts.body ? JSON.stringify(opts.body) : undefined
+        body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Request failed');
+      const raw = await res.text();
+      let data = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 120)}`);
+          throw new Error('Invalid JSON response from server');
+        }
+      }
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `Request failed (HTTP ${res.status})`);
+      }
       return data;
     }
 
-    function switchTab(name) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+    async function runAction(btn, fn, opts = {}) {
+      if (btn && btn.dataset.busy === '1') return;
+      if (opts.errorEl) showBanner(opts.errorEl, '');
+      const prevHtml = btn ? btn.innerHTML : null;
+      if (btn) {
+        btn.dataset.busy = '1';
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        if (opts.busyText) btn.textContent = opts.busyText;
+      }
+      try {
+        return await fn();
+      } catch (err) {
+        const msg = err?.message || 'Action failed';
+        if (opts.errorEl) showBanner(opts.errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        return null;
+      } finally {
+        if (btn) {
+          if (!opts.busyText || btn.textContent === opts.busyText) {
+            btn.innerHTML = prevHtml;
+          }
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+          delete btn.dataset.busy;
+        }
+      }
     }
 
-    document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach((b) => {
+        const active = b.dataset.tab === name;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+        b.setAttribute('tabindex', active ? '0' : '-1');
+      });
+      document.querySelectorAll('.tab-panel').forEach((p) => {
+        const active = p.id === `tab-${name}`;
+        p.classList.toggle('hidden', !active);
+        if (active) p.removeAttribute('hidden');
+        else p.setAttribute('hidden', '');
+      });
+    }
+
+    document.querySelector('.nav').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn || !btn.dataset.tab) return;
+      switchTab(btn.dataset.tab);
+    });
+
+    document.querySelector('.nav').addEventListener('keydown', (e) => {
+      const tabs = [...document.querySelectorAll('.tab-btn')];
+      const idx = tabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      let nextIdx = -1;
+      if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') nextIdx = 0;
+      else if (e.key === 'End') nextIdx = tabs.length - 1;
+      if (nextIdx !== -1) {
+        e.preventDefault();
+        const target = tabs[nextIdx];
+        switchTab(target.dataset.tab);
+        target.focus();
+      }
+    });
+
+    function normalizeMacUi(mac) {
+      const trimmed = String(mac || '').trim().toLowerCase();
+      if (!trimmed) return '';
+      if (/^[0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}$/.test(trimmed)) {
+        return trimmed.replace(/\./g, '').match(/.{2}/g).join(':');
+      }
+      if (/^([0-9a-f]{1,2})([:-])(?:[0-9a-f]{1,2}\2){4}[0-9a-f]{1,2}$/.test(trimmed)) {
+        return trimmed.replace(/-/g, ':').split(':').map((p) => p.padStart(2, '0')).join(':');
+      }
+      return trimmed;
+    }
+
+    function parseMacInputList(raw) {
+      const out = [];
+      for (const part of String(raw || '').split(',')) {
+        const norm = normalizeMacUi(part);
+        if (norm && !out.includes(norm)) out.push(norm);
+      }
+      return out;
+    }
+
+    function toggleMacInInput(inputId, mac) {
+      const input = document.getElementById(inputId);
+      const norm = normalizeMacUi(mac);
+      if (!input || !norm) return;
+      const list = parseMacInputList(input.value);
+      const idx = list.indexOf(norm);
+      if (idx >= 0) list.splice(idx, 1);
+      else list.push(norm);
+      input.value = list.join(', ');
+      renderMacPickers();
+    }
+
+    function renderMacPickers() {
+      const devices = appData?.devices || [];
+      for (const [pickerId, inputId] of [['qDevicePicker', 'qMacs'], ['sDevicePicker', 'sMacs']]) {
+        const container = document.getElementById(pickerId);
+        if (!container) continue;
+        if (devices.length === 0) {
+          container.innerHTML = `<span class="mono">No LAN devices discovered yet.</span>`;
+          continue;
+        }
+        const selected = new Set(parseMacInputList(document.getElementById(inputId)?.value));
+        container.innerHTML = devices.map((d) => {
+          const isOn = selected.has(normalizeMacUi(d.mac));
+          const label = d.displayName || d.name || d.mac;
+          return `<button type="button" class="chip mac-pill ${isOn ? 'on' : ''}" data-action="pick-mac" data-target="${inputId}" data-mac="${escapeHtml(d.mac)}" aria-pressed="${isOn ? 'true' : 'false'}" title="${escapeHtml(d.mac)}">${escapeHtml(label)}</button>`;
+        }).join('');
+      }
+    }
+
+    function renderSchedDays() {
+      const el = document.getElementById('schedDays');
+      if (!el) return;
+      el.innerHTML = DAY_ORDER.map((day) => {
+        const active = selectedSchedDays.has(day);
+        return `<button type="button" class="chip day-pill ${active ? 'on' : ''}" data-action="toggle-day" data-day="${day}" aria-pressed="${active ? 'true' : 'false'}">${day}</button>`;
+      }).join('');
+    }
+
+    function setSetupDirty(dirty) {
+      setupDirty = Boolean(dirty);
+      const badge = document.getElementById('setupDirtyBadge');
+      if (badge) badge.classList.toggle('hidden', !setupDirty);
+    }
+
+    function updateAdapterFields(applyDefaultGateway = false) {
+      if (!appData) return;
+      const adapters = appData.adapters || [];
+      const sel = document.getElementById('setupDriver');
+      const meta = adapters.find((a) => a.id === sel.value) || adapters[0];
+      if (!meta) return;
+
+      const gwInput = document.getElementById('setupGateway');
+      const gwLabel = document.getElementById('setupGatewayLabel');
+      const isOptionalGw = meta.id === 'universal' || meta.id === 'custom';
+      gwLabel.textContent = isOptionalGw ? 'Gateway URL (optional)' : 'Gateway URL (required)';
+      gwInput.placeholder = meta.defaultGateway || 'http://192.168.1.1';
+
+      if (applyDefaultGateway && meta.defaultGateway) {
+        const currentGw = gwInput.value.trim();
+        const knownDefaults = new Set(['', 'auto', ...adapters.map((a) => a.defaultGateway).filter(Boolean)]);
+        if (knownDefaults.has(currentGw)) {
+          gwInput.value = meta.defaultGateway;
+        }
+      }
+
+      const authFields = meta.authFields || [];
+      const fieldMap = Object.fromEntries(authFields.map((f) => [f.key, f]));
+
+      const userWrap = document.getElementById('setupUserWrap');
+      const userLabel = document.getElementById('setupUserLabel');
+      const userInput = document.getElementById('setupUser');
+      if (fieldMap.username) {
+        userWrap.classList.remove('hidden');
+        userLabel.textContent = `${fieldMap.username.label}${fieldMap.username.required ? ' (required)' : ' (optional)'}`;
+        userInput.required = Boolean(fieldMap.username.required);
+      } else {
+        userWrap.classList.add('hidden');
+        userInput.required = false;
+      }
+
+      const passWrap = document.getElementById('setupPassWrap');
+      const passLabel = document.getElementById('setupPassLabel');
+      const passInput = document.getElementById('setupPass');
+      if (fieldMap.password) {
+        passWrap.classList.remove('hidden');
+        passLabel.textContent = `${fieldMap.password.label}${fieldMap.password.required ? ' (required)' : ''}`;
+        passInput.type = fieldMap.password.secret ? 'password' : 'text';
+        passInput.required = Boolean(fieldMap.password.required);
+        const isSavedDriver = meta.id === (appData.router?.driver || 'universal');
+        passInput.placeholder = (isSavedDriver && appData.router?.hasPassword) ? 'Saved (leave unchanged to keep)' : 'Enter router password / access code';
+      } else {
+        passWrap.classList.add('hidden');
+        passInput.required = false;
+      }
+
+      document.getElementById('universalGuide').classList.toggle('hidden', meta.id !== 'universal');
+      document.getElementById('customHooksBox').classList.toggle('hidden', meta.id !== 'custom');
+
+      const caps = meta.capabilities || {};
+      const metaBox = document.getElementById('adapterMetaBox');
+      metaBox.innerHTML = [
+        `<span class="pill">${escapeHtml(meta.vendor || meta.name)}</span>`,
+        `<span class="pill offline">${escapeHtml(meta.protocol || 'HTTP')}</span>`,
+        `<span class="pill offline">Discovery: ${escapeHtml(caps.discovery || 'arp')}</span>`,
+        `<span class="pill offline">Pause: ${escapeHtml(caps.pause || 'dns')}</span>`,
+        `<span class="pill offline">Filter: ${escapeHtml(caps.domainFilter || 'dns-sinkhole')}</span>`,
+        caps.zeroPassword ? `<span class="pill online">Zero-Password</span>` : ''
+      ].filter(Boolean).join('');
+    }
+
+    function hydrateSetupForm(data) {
+      const adapters = data.adapters || [];
+      const router = data.router || data.state?.router || {};
+      const sel = document.getElementById('setupDriver');
+      sel.innerHTML = adapters.map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`).join('');
+      sel.value = router.driver || 'universal';
+
+      document.getElementById('setupGateway').value = router.gatewayUrl || '';
+      document.getElementById('setupUser').value = router.username || '';
+      const hasPw = Boolean(router.hasPassword || router.passwordConfigured);
+      document.getElementById('setupPass').value = hasPw ? '••••••••' : '';
+
+      const hooks = router.customHooks || {};
+      document.getElementById('setupBlockCmd').value = hooks.blockCmd ?? router.blockCmd ?? '';
+      document.getElementById('setupUnblockCmd').value = hooks.unblockCmd ?? router.unblockCmd ?? '';
+      document.getElementById('setupListCmd').value = hooks.listCmd ?? router.listCmd ?? '';
+      document.getElementById('setupPollInterval').value = String(router.pollIntervalSec || 60);
+
+      setSetupDirty(false);
+      updateAdapterFields(false);
+    }
+
+    function parseDurationMinutesUi(input) {
+      const str = String(input || '').trim().toLowerCase();
+      if (!str) return null;
+      if (/^\d+$/.test(str)) return Number(str);
+      const hhmm = str.match(/^(\d+):(\d{1,2})$/);
+      if (hhmm) return Number(hhmm[1]) * 60 + Number(hhmm[2]);
+      const hm = str.match(/^(?:(\d+(?:\.\d+)?)h)?\s*(?:(\d+(?:\.\d+)?)m)?$/);
+      if (hm && (hm[1] || hm[2])) return Math.round((Number(hm[1] || 0) * 60) + Number(hm[2] || 0));
+      return null;
+    }
+
+    function formatDurationUi(seconds) {
+      const s = Math.max(0, Math.round(Number(seconds) || 0));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const rem = s % 60;
+      if (h > 0 && m > 0) return `${h}h ${m}m`;
+      if (h > 0) return `${h}h`;
+      if (m > 0) return `${m}m`;
+      return `${rem}s`;
+    }
+
+    function formatPauseBadge(pauseInfo) {
+      if (!pauseInfo) return 'Paused';
+      if (!pauseInfo.expiresAt) return 'Paused · Indefinite';
+      const minsLeft = Math.max(1, Math.ceil((Number(pauseInfo.expiresAt) - Date.now()) / 60000));
+      return `Paused · ${minsLeft}m left`;
+    }
+
+    function resetQuotaForm() {
+      editingQuotaId = null;
+      document.getElementById('quotaFormTitle').textContent = 'Add Daily Quota';
+      document.getElementById('addQuotaBtn').textContent = 'Save Quota';
+      document.getElementById('cancelQuotaEditBtn').classList.add('hidden');
+      document.getElementById('qName').value = '';
+      document.getElementById('qMacs').value = '';
+      document.getElementById('qLimit').value = '1h30m';
+      showBanner(document.getElementById('quotaFormError'), '');
+      renderMacPickers();
+    }
+
+    function resetScheduleForm() {
+      editingScheduleId = null;
+      document.getElementById('schedFormTitle').textContent = 'Add Bedtime Schedule';
+      document.getElementById('addSchedBtn').textContent = 'Save Schedule';
+      document.getElementById('cancelSchedEditBtn').classList.add('hidden');
+      document.getElementById('sName').value = '';
+      document.getElementById('sMacs').value = '';
+      document.getElementById('sStart').value = '21:00';
+      document.getElementById('sEnd').value = '07:00';
+      selectedSchedDays = new Set(DEFAULT_SCHED_DAYS);
+      showBanner(document.getElementById('schedFormError'), '');
+      renderSchedDays();
+      renderMacPickers();
+    }
 
     function render() {
-      const { state, devices, quotas, adapters, categories, dns } = appData;
-      const activeAdapter = adapters.find(a => a.id === state.router.driver) || adapters[0];
+      if (!appData) return;
+      const state = appData.state || {};
+      const router = appData.router || state.router || {};
+      const devices = appData.devices || [];
+      const quotas = appData.quotas || [];
+      const adapters = appData.adapters || [];
+      const categories = appData.categoryPresets || appData.categories || [];
+      const dns = appData.dns || {};
+      const daemon = appData.daemon || {};
+      const schedules = appData.schedules || state.schedules || [];
+      const auditLog = appData.auditLog || state.auditLog || [];
+
+      const activeAdapter = adapters.find((a) => a.id === router.driver) || adapters[0] || { id: router.driver || 'universal' };
+      const blockedDomainsList = (dns.blockedDomains || state.blockedDomains || []).filter((d) => d.enabled !== false);
 
       document.getElementById('adapterBadge').textContent = activeAdapter.id;
       document.getElementById('statDriver').textContent = activeAdapter.id;
-      document.getElementById('statGateway').textContent = state.router.gatewayUrl;
-      document.getElementById('statDevices').textContent = devices.length;
-      document.getElementById('statOnline').textContent = `${devices.filter(d => d.status === 'online').length} online`;
-      document.getElementById('statQuotas').textContent = quotas.length;
-      document.getElementById('statBlocked').textContent = `${devices.filter(d => d.isBlocked).length} blocked now`;
-      document.getElementById('statDns').textContent = dns.active ? `UDP :${dns.port}` : 'Off';
-      document.getElementById('statDomains').textContent = `${(state.blockedDomains || []).length} domains blocked`;
-      document.getElementById('dnsEndpoint').textContent = dns.active ? `Point device DNS to ${dns.lanIp}:${dns.port}` : 'DNS Sinkhole inactive';
+      document.getElementById('statGateway').textContent = router.gatewayUrl || 'auto';
+      document.getElementById('statDevices').textContent = String(devices.length);
+      document.getElementById('statOnline').textContent = `${devices.filter((d) => d.status === 'online').length} online`;
+      document.getElementById('statQuotas').textContent = String(quotas.length);
+      document.getElementById('statBlocked').textContent = `${devices.filter((d) => d.isBlocked).length} blocked now`;
+      document.getElementById('statDns').textContent = dns.listening || dns.active ? `UDP :${dns.port}` : 'Off';
+      document.getElementById('statDomains').textContent = `${blockedDomainsList.length} domains blocked`;
+
+      // Daemon sync pill
+      const syncPill = document.getElementById('daemonSyncPill');
+      if (daemon.lastSyncSummary?.ok === false) {
+        syncPill.className = 'pill warn';
+        syncPill.textContent = `Sync warning (${daemon.lastSyncSummary.failures || 1} failed)`;
+      } else if (daemon.running) {
+        syncPill.className = 'pill online';
+        syncPill.textContent = `Daemon ${daemon.pollIntervalSec || 60}s`;
+      } else {
+        syncPill.className = 'pill offline';
+        syncPill.textContent = 'On-demand sync';
+      }
+
+      // Overview device error banner
+      const devBanner = document.getElementById('overviewDeviceBanner');
+      showBanner(devBanner, appData.deviceError ? `Device discovery issue: ${appData.deviceError}` : '', 'warn');
 
       // Quotas
       const qEl = document.getElementById('quotasList');
       if (quotas.length === 0) {
         qEl.innerHTML = `<div class="mono">No daily quotas configured yet. Add one below (e.g. 1h30m/day).</div>`;
       } else {
-        qEl.innerHTML = quotas.map(q => {
+        qEl.innerHTML = quotas.map((q) => {
+          const isDisabled = q.enabled === false;
+          const isLocked = q.enabled !== false && Boolean(q.blockedToday);
           const pct = q.limitSeconds > 0 ? Math.min(100, Math.round((q.usedSeconds / q.limitSeconds) * 100)) : 100;
-          return `<div class="row">
-            <div style="flex: 1; min-width: 240px;">
-              <div><strong>${q.name}</strong> <span class="pill ${q.blockedToday ? 'blocked' : 'online'}">${q.blockedToday ? 'LOCKED' : q.remainingFormatted + ' left'}</span></div>
-              <div class="mono">${q.macs.join(', ')} · Used ${q.usedFormatted} / ${q.limitFormatted}</div>
-              <div class="bar-track"><div class="bar-fill ${q.blockedToday ? 'over' : ''}" style="width:${pct}%"></div></div>
+          const pillCls = isDisabled ? 'offline' : isLocked ? 'blocked' : 'online';
+          const pillTxt = isDisabled ? 'DISABLED' : isLocked ? 'LOCKED' : `${q.remainingFormatted} left`;
+          const macList = (q.macs || q.targetMacs || []).join(', ');
+          return `<div class="row" data-quota-id="${escapeHtml(q.id)}">
+            <div class="row-main">
+              <div class="row-title">
+                <strong>${escapeHtml(q.name)}</strong>
+                <span class="pill ${pillCls}">${escapeHtml(pillTxt)}</span>
+              </div>
+              <div class="mono">${escapeHtml(macList)} · Used ${escapeHtml(q.usedFormatted)} / ${escapeHtml(q.limitFormatted)}</div>
+              <div class="bar-track"><div class="bar-fill ${isLocked ? 'over' : ''}" style="width:${pct}%"></div></div>
             </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn" onclick="bonusQuota('${q.id}')">+30m</button>
-              <button class="btn" onclick="resetQuota('${q.id}')">Reset</button>
-              <button class="btn danger" onclick="deleteQuota('${q.id}')">Delete</button>
+            <div class="row-actions">
+              <button type="button" class="btn" data-action="quota-bonus" data-id="${escapeHtml(q.id)}">${svgIcon('plus')}<span>+30m</span></button>
+              <button type="button" class="btn" data-action="quota-reset" data-id="${escapeHtml(q.id)}">${svgIcon('reset')}<span>Reset</span></button>
+              <button type="button" class="btn" data-action="quota-edit" data-id="${escapeHtml(q.id)}">${svgIcon('edit')}<span>Edit</span></button>
+              <button type="button" class="btn danger" data-action="quota-delete" data-id="${escapeHtml(q.id)}">${svgIcon('trash')}<span>Delete</span></button>
             </div>
           </div>`;
         }).join('');
       }
 
-      // Devices
+      // Devices (preserve open inline alias draft, focus & selection across re-renders)
       const dEl = document.getElementById('devicesList');
+      const activeEditInput = dEl.querySelector('input[data-role="alias-input"]');
+      const wasAliasFocused = Boolean(activeEditInput && document.activeElement === activeEditInput);
+      const aliasSelStart = wasAliasFocused ? activeEditInput.selectionStart : null;
+      const aliasSelEnd = wasAliasFocused ? activeEditInput.selectionEnd : null;
+      if (
+        editingAliasMac &&
+        activeEditInput &&
+        activeEditInput.closest('[data-device-mac]')?.dataset.deviceMac === editingAliasMac
+      ) {
+        editingAliasValue = activeEditInput.value;
+      }
       if (devices.length === 0) {
         dEl.innerHTML = `<div class="mono">No devices discovered yet. Open Router Setup to configure your gateway.</div>`;
       } else {
-        dEl.innerHTML = devices.map(d => {
+        dEl.innerHTML = devices.map((d) => {
           const pillCls = d.isBlocked ? 'blocked' : d.status === 'online' ? 'online' : 'offline';
-          const pillTxt = d.isBlocked ? 'BLOCKED' : d.status.toUpperCase();
-          return `<div class="row">
-            <div>
-              <div><strong>${d.displayName}</strong> <span class="pill ${pillCls}">${pillTxt}</span></div>
-              <div class="mono">${d.mac} · ${d.ipv4 || 'no IPv4'} · ${d.band}${d.quota ? ` · Quota ${d.quota.usedFormatted}/${d.quota.limitFormatted}` : ''}</div>
+          const pillTxt = d.isBlocked ? 'BLOCKED' : String(d.status || 'offline').toUpperCase();
+          const isEditingThis = editingAliasMac === d.mac;
+
+          const reasonBadges = [];
+          if (d.isPaused) {
+            reasonBadges.push(`<span class="pill blocked">${escapeHtml(formatPauseBadge(d.pauseInfo))}</span>`);
+            if (d.pauseInfo?.sync?.ok === false) {
+              reasonBadges.push(`<span class="pill warn">Sync failed: ${escapeHtml(d.pauseInfo.sync.detail || 'router error')}</span>`);
+            }
+          }
+          if (d.activeSchedule) {
+            reasonBadges.push(`<span class="pill blocked">${svgIcon('clock', 12)}<span>Bedtime: ${escapeHtml(d.activeSchedule.name)}</span></span>`);
+          }
+          if (d.quota && d.quota.enabled !== false && d.quota.blockedToday) {
+            reasonBadges.push(`<span class="pill blocked">Quota Locked</span>`);
+          }
+
+          const metaParts = [
+            d.mac,
+            d.ipv4 || 'no IPv4',
+            d.band || 'LAN'
+          ];
+          if (d.quota) {
+            metaParts.push(`Quota ${d.quota.usedFormatted}/${d.quota.limitFormatted}`);
+          }
+
+          const inlineEditor = isEditingThis
+            ? `<div class="inline-edit-bar">
+                <input type="text" class="alias-input" data-role="alias-input" aria-label="Device alias for ${escapeHtml(d.displayName)}" value="${escapeHtml(editingAliasValue)}" placeholder="Device alias" />
+                <button type="button" class="btn primary" data-action="save-alias" data-mac="${escapeHtml(d.mac)}">${svgIcon('check')}<span>Save</span></button>
+                <button type="button" class="btn" data-action="cancel-alias">${svgIcon('x')}<span>Cancel</span></button>
+              </div>`
+            : '';
+
+          const pauseControls = d.isPaused
+            ? `<button type="button" class="btn primary" data-action="resume-device" data-mac="${escapeHtml(d.mac)}">${svgIcon('play')}<span>Resume</span></button>`
+            : `<select class="pause-select" data-role="pause-duration" aria-label="Pause duration for ${escapeHtml(d.displayName)}">
+                <option value="15">15m</option>
+                <option value="30">30m</option>
+                <option value="60" selected>1h</option>
+                <option value="120">2h</option>
+                <option value="">Until resumed</option>
+              </select>
+              <button type="button" class="btn" data-action="pause-device" data-mac="${escapeHtml(d.mac)}">${svgIcon('pause')}<span>Pause</span></button>`;
+
+          return `<div class="row" data-device-mac="${escapeHtml(d.mac)}">
+            <div class="row-main">
+              <div class="row-title">
+                <strong>${escapeHtml(d.displayName)}</strong>
+                ${d.isPinned ? `<span class="pill">Pinned</span>` : ''}
+                <span class="pill ${pillCls}">${escapeHtml(pillTxt)}</span>
+                ${reasonBadges.join('')}
+              </div>
+              <div class="mono">${escapeHtml(metaParts.join(' · '))}</div>
+              ${inlineEditor}
             </div>
-            <div style="display:flex; gap:6px;">
-              ${d.isPaused
-                ? `<button class="btn primary" onclick="resumeDev('${d.mac}')">Resume</button>`
-                : `<button class="btn" onclick="pauseDev('${d.mac}', 60)">Pause 1h</button><button class="btn danger" onclick="pauseDev('${d.mac}', null)">Pause</button>`
-              }
-              <button class="btn" onclick="prefillQuota('${d.displayName.replace(/'/g, '')}', '${d.mac}')">Set Quota</button>
+            <div class="row-actions">
+              <button type="button" class="btn" data-action="edit-alias" data-mac="${escapeHtml(d.mac)}">${svgIcon('edit')}<span>Rename</span></button>
+              <button type="button" class="btn ${d.isPinned ? 'primary' : ''}" data-action="pin-device" data-mac="${escapeHtml(d.mac)}" aria-pressed="${d.isPinned ? 'true' : 'false'}">${svgIcon('pin')}<span>${d.isPinned ? 'Unpin' : 'Pin'}</span></button>
+              ${pauseControls}
+              <button type="button" class="btn" data-action="prefill-quota" data-mac="${escapeHtml(d.mac)}" data-name="${escapeHtml(d.displayName)}">Set Quota</button>
             </div>
           </div>`;
         }).join('');
+        if (wasAliasFocused && editingAliasMac) {
+          const restoredInput = dEl.querySelector(`[data-device-mac="${CSS.escape(editingAliasMac)}"] input[data-role="alias-input"]`);
+          if (restoredInput) {
+            restoredInput.focus();
+            if (typeof aliasSelStart === 'number' && typeof aliasSelEnd === 'number') {
+              try { restoredInput.setSelectionRange(aliasSelStart, aliasSelEnd); } catch {}
+            }
+          }
+        }
       }
 
       // Schedules
       const sEl = document.getElementById('schedulesList');
-      const scheds = state.schedules || [];
-      sEl.innerHTML = scheds.length === 0
-        ? `<div class="mono">No bedtime schedules yet.</div>`
-        : scheds.map(s => `<div class="row">
-            <div>
-              <div><strong>${s.name}</strong> <span class="pill ${s.enabled ? 'online' : 'offline'}">${s.enabled ? 'ENABLED' : 'OFF'}</span></div>
-              <div class="mono">${s.startTime} → ${s.endTime} · ${(s.days || []).join(', ')} · ${(s.targetMacs || []).join(', ')}</div>
+      if (schedules.length === 0) {
+        sEl.innerHTML = `<div class="mono">No bedtime schedules yet.</div>`;
+      } else {
+        sEl.innerHTML = schedules.map((s) => {
+          const isEnabled = Boolean(s.enabled);
+          return `<div class="row" data-sched-id="${escapeHtml(s.id)}">
+            <div class="row-main">
+              <div class="row-title">
+                <strong>${escapeHtml(s.name)}</strong>
+                <span class="pill ${isEnabled ? 'online' : 'offline'}">${isEnabled ? 'ENABLED' : 'OFF'}</span>
+              </div>
+              <div class="mono">${escapeHtml(s.startTime)} → ${escapeHtml(s.endTime)} · ${escapeHtml((s.days || []).join(', '))} · ${escapeHtml((s.targetMacs || []).join(', '))}</div>
             </div>
-          </div>`).join('');
+            <div class="row-actions">
+              <button type="button" class="btn" data-action="sched-toggle" data-id="${escapeHtml(s.id)}" data-enabled="${isEnabled ? 'false' : 'true'}">${isEnabled ? 'Disable' : 'Enable'}</button>
+              <button type="button" class="btn" data-action="sched-edit" data-id="${escapeHtml(s.id)}">${svgIcon('edit')}<span>Edit</span></button>
+              <button type="button" class="btn danger" data-action="sched-delete" data-id="${escapeHtml(s.id)}">${svgIcon('trash')}<span>Delete</span></button>
+            </div>
+          </div>`;
+        }).join('');
+      }
 
-      // Categories
-      const blockedCats = new Set(state.blockedCategories || []);
-      document.getElementById('catChips').innerHTML = categories.map(c =>
-        `<button class="chip ${blockedCats.has(c.id) ? 'on' : ''}" onclick="toggleCat('${c.id}', ${!blockedCats.has(c.id)})">${c.label}</button>`
-      ).join('');
+      // DNS status banner & endpoint
+      const dnsListening = Boolean(dns.listening ?? dns.active);
+      document.getElementById('dnsEndpoint').textContent = dnsListening
+        ? `Point device DNS to ${dns.lanIp}:${dns.port}`
+        : 'DNS Sinkhole inactive';
+      const dnsBanner = document.getElementById('dnsStatusBanner');
+      if (!dnsListening || dns.error) {
+        showBanner(dnsBanner, dns.error ? `DNS Sinkhole error: ${dns.error}` : 'DNS Sinkhole is not listening on UDP.', 'warn');
+      } else {
+        showBanner(dnsBanner, `Listening on UDP :${dns.port} · Upstream ${dns.upstream || '1.1.1.1'} · Device DNS ${dns.lanIp}:${dns.port}`, 'ok');
+      }
+
+      // Categories (strictly preserve categoryPresets order)
+      const blockedCats = new Set(dns.blockedCategories || state.blockedCategories || []);
+      document.getElementById('catChips').innerHTML = categories.map((c) => {
+        const isOn = blockedCats.has(c.id);
+        const domCount = (c.domains || []).length;
+        return `<button type="button" class="chip ${isOn ? 'on' : ''}" data-action="toggle-cat" data-category="${escapeHtml(c.id)}" data-enabled="${isOn ? 'false' : 'true'}" aria-pressed="${isOn ? 'true' : 'false'}"><span>${escapeHtml(c.label)}</span> <span class="chip-count">(${domCount})</span></button>`;
+      }).join('');
+
+      // Custom Blocked Domains
+      const customSet = new Set([
+        ...(dns.customBlockedDomains || []),
+        ...(dns.blockedDomains || state.blockedDomains || [])
+          .filter((d) => d.enabled !== false && (d.custom || d.category === 'custom'))
+          .map((d) => d.domain)
+      ]);
+      const customDomains = [...customSet];
+      const customEl = document.getElementById('customDomainsList');
+      if (customDomains.length === 0) {
+        customEl.innerHTML = `<div class="mono">No custom domains blocked yet.</div>`;
+      } else {
+        customEl.innerHTML = customDomains.map((dom) => `<div class="row row-compact domain-row" data-domain="${escapeHtml(dom)}">
+          <div class="row-main"><span class="mono">${escapeHtml(dom)}</span></div>
+          <div class="row-actions">
+            <button type="button" class="btn danger" data-action="unblock-domain" data-domain="${escapeHtml(dom)}">${svgIcon('x')}<span>Unblock</span></button>
+          </div>
+        </div>`).join('');
+      }
 
       // DNS log
       const logs = dns.recentQueries || [];
       document.getElementById('dnsLogList').innerHTML = logs.length === 0
         ? `<div class="mono">No DNS queries logged yet. Run a UDP DNS Test above.</div>`
-        : logs.slice(0, 20).map(q => `<div class="row" style="padding:7px 0;">
-            <span class="mono">${q.ts.slice(11, 19)} · ${q.clientIp} → <strong>${q.domain}</strong> (${q.qtype})</span>
-            <span class="pill ${q.action === 'BLOCKED' ? 'blocked' : 'online'}">${q.action}</span>
+        : logs.slice(0, 25).map((q) => `<div class="row row-compact">
+            <div class="row-main">
+              <div class="mono">${escapeHtml((q.ts || '').slice(11, 19))} · ${escapeHtml(q.clientIp || '')} → <strong>${escapeHtml(q.domain || '')}</strong> (${escapeHtml(q.qtype || 'A')})</div>
+              ${q.reason ? `<div class="mono">${escapeHtml(q.reason)}</div>` : ''}
+            </div>
+            <div class="row-actions">
+              <span class="pill ${q.action === 'BLOCKED' ? 'blocked' : 'online'}">${escapeHtml(q.action || 'ALLOWED')}</span>
+            </div>
           </div>`).join('');
 
-      // Setup dropdown
-      const sel = document.getElementById('setupDriver');
-      if (!sel.options.length) {
-        sel.innerHTML = adapters.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      // Audit log
+      const auditEl = document.getElementById('auditLogList');
+      if (auditLog.length === 0) {
+        auditEl.innerHTML = `<div class="mono">No activity recorded yet.</div>`;
+      } else {
+        auditEl.innerHTML = auditLog.slice(0, 30).map((entry) => `<div class="row row-compact">
+          <div class="row-main">
+            <div class="row-title">
+              <span class="pill">${escapeHtml(entry.action || 'EVENT')}</span>
+              ${entry.target ? `<span class="mono">${escapeHtml(entry.target)}</span>` : ''}
+            </div>
+            ${entry.detail ? `<div class="mono">${escapeHtml(entry.detail)}</div>` : ''}
+          </div>
+          <div class="row-actions">
+            <span class="mono">${escapeHtml((entry.ts || '').slice(11, 19) || entry.ts || '')}</span>
+          </div>
+        </div>`).join('');
       }
-      sel.value = state.router.driver;
-      document.getElementById('setupGateway').value = state.router.gatewayUrl || '';
-      document.getElementById('setupUser').value = state.router.username || '';
-      document.getElementById('setupPass').value = state.router.passwordConfigured ? '••••••••' : '';
-      document.getElementById('setupBlockCmd').value = state.router.blockCmd || '';
-      document.getElementById('setupUnblockCmd').value = state.router.unblockCmd || '';
-      document.getElementById('guideDnsIp').textContent = `${dns.lanIp} (port ${dns.port})`;
-      const updateAdapterFields = () => {
-        document.getElementById('universalGuide').classList.toggle('hidden', sel.value !== 'universal');
-        document.getElementById('customHooksBox').classList.toggle('hidden', sel.value !== 'custom');
-      };
-      sel.onchange = updateAdapterFields;
-      updateAdapterFields();
 
-      if (!state.setupCompleted && !window.__setupOpenedOnce) {
+      // Pickers & Day Pills
+      renderMacPickers();
+      renderSchedDays();
+
+      // Setup form hydration (respect setupDirty!)
+      document.getElementById('guideDnsIp').textContent = `${dns.lanIp || '127.0.0.1'} (port ${dns.port || 5354})`;
+      if (!setupHydrated || !setupDirty) {
+        hydrateSetupForm(appData);
+        setupHydrated = true;
+      }
+
+      if (!appData.setupCompleted && !window.__setupOpenedOnce) {
         window.__setupOpenedOnce = true;
         switchTab('setup');
       }
     }
 
-    async function load() {
-      appData = await api('/api/state');
-      render();
+    async function load({ silent = false } = {}) {
+      if (loadInFlight && loadPromise) {
+        loadQueued = true;
+        if (!silent) loadQueuedSilent = false;
+        return loadPromise;
+      }
+
+      loadInFlight = true;
+      loadQueued = false;
+      loadQueuedSilent = silent;
+
+      loadPromise = (async () => {
+        const globalErr = document.getElementById('globalErrorBanner');
+        let currentSilent = silent;
+        try {
+          while (true) {
+            loadQueued = false;
+            const startSeq = mutationSeq;
+            try {
+              const fresh = await api('/api/state');
+              if (startSeq === mutationSeq && !loadQueued) {
+                appData = fresh;
+                showBanner(globalErr, '');
+                render();
+              }
+            } catch (err) {
+              if (startSeq === mutationSeq && !loadQueued) {
+                const msg = `Failed to load studio state: ${err.message}`;
+                showBanner(globalErr, msg, 'danger');
+                if (!currentSilent) toast(msg, 'danger');
+              }
+            }
+            if (!loadQueued) {
+              break;
+            }
+            currentSilent = loadQueuedSilent;
+            loadQueuedSilent = true;
+          }
+        } finally {
+          loadInFlight = false;
+          loadPromise = null;
+        }
+      })();
+
+      return loadPromise;
     }
 
-    window.pauseDev = async (mac, duration) => {
-      await api('/api/devices/pause', { method: 'POST', body: { mac, duration } });
-      toast('Device paused');
-      await load();
-    };
-    window.resumeDev = async (mac) => {
-      await api('/api/devices/resume', { method: 'POST', body: { mac } });
-      toast('Device resumed');
-      await load();
-    };
-    window.prefillQuota = (name, mac) => {
-      document.getElementById('qName').value = name;
-      document.getElementById('qMacs').value = mac;
-      document.getElementById('qLimit').focus();
-    };
-    window.bonusQuota = async (id) => {
-      await api('/api/quotas/bonus', { method: 'POST', body: { id, minutes: '30m' } });
-      toast('Added +30m bonus');
-      await load();
-    };
-    window.resetQuota = async (id) => {
-      await api('/api/quotas/reset', { method: 'POST', body: { id } });
-      toast('Reset today usage to 0m');
-      await load();
-    };
-    window.deleteQuota = async (id) => {
-      await api(`/api/quotas/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      toast('Quota removed');
-      await load();
-    };
-    window.toggleCat = async (category, enabled) => {
-      await api('/api/dns/category', { method: 'POST', body: { category, enabled } });
-      toast(`${enabled ? 'Blocked' : 'Unblocked'} ${category}`);
-      await load();
-    };
+    // Delegated click handlers inside <main>
+    document.querySelector('main').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
 
-    document.getElementById('refreshBtn').addEventListener('click', load);
-    document.getElementById('addQuotaBtn').addEventListener('click', async () => {
-      const name = document.getElementById('qName').value.trim();
-      const macs = document.getElementById('qMacs').value.split(',').map(s => s.trim()).filter(Boolean);
-      const limit = document.getElementById('qLimit').value.trim();
-      await api('/api/quotas', { method: 'POST', body: { name, macs, limit } });
-      toast(`Saved quota: ${name} (${limit}/day)`);
-      await load();
-    });
-    document.getElementById('addSchedBtn').addEventListener('click', async () => {
-      const name = document.getElementById('sName').value.trim();
-      const startTime = document.getElementById('sStart').value;
-      const endTime = document.getElementById('sEnd').value;
-      const targetMacs = document.getElementById('sMacs').value.split(',').map(s => s.trim()).filter(Boolean);
-      await api('/api/schedules', { method: 'POST', body: { name, startTime, endTime, targetMacs } });
-      toast(`Saved schedule: ${name}`);
-      await load();
-    });
-    document.getElementById('blockDomainBtn').addEventListener('click', async () => {
-      const domain = document.getElementById('customDomain').value.trim();
-      if (!domain) return;
-      await api('/api/dns/domain', { method: 'POST', body: { domain, action: 'block' } });
-      document.getElementById('customDomain').value = '';
-      toast(`Blocked ${domain}`);
-      await load();
-    });
-    document.getElementById('testDnsBtn').addEventListener('click', async () => {
-      const domain = document.getElementById('testDomain').value.trim();
-      const res = await api('/api/dns/test', { method: 'POST', body: { domain } });
-      document.getElementById('dnsTestOut').textContent = res.ok
-        ? `${res.domain} → ${res.resolvedIp} (${res.sinkholed ? 'BLOCKED by sinkhole' : 'ALLOWED'})`
-        : `Error: ${res.error}`;
-      await load();
-    });
-    document.getElementById('detectBtn').addEventListener('click', async () => {
-      const res = await api('/api/router/detect');
-      document.getElementById('setupDriver').value = res.matchedDriver;
-      document.getElementById('setupGateway').value = res.gatewayUrl;
-      document.getElementById('detectHint').textContent = `Detected: ${res.modelHint} at ${res.gatewayIp}`;
-    });
-    document.getElementById('saveSetupBtn').addEventListener('click', async () => {
-      const res = await api('/api/setup', {
-        method: 'POST',
-        body: {
-          driver: document.getElementById('setupDriver').value,
-          gatewayUrl: document.getElementById('setupGateway').value,
-          username: document.getElementById('setupUser').value,
-          password: document.getElementById('setupPass').value,
-          blockCmd: document.getElementById('setupBlockCmd').value,
-          unblockCmd: document.getElementById('setupUnblockCmd').value
+      if (action === 'pick-mac') {
+        toggleMacInInput(btn.dataset.target, btn.dataset.mac);
+        return;
+      }
+
+      if (action === 'toggle-day') {
+        const day = btn.dataset.day;
+        if (selectedSchedDays.has(day)) selectedSchedDays.delete(day);
+        else selectedSchedDays.add(day);
+        renderSchedDays();
+        return;
+      }
+
+      if (action === 'edit-alias') {
+        const mac = btn.dataset.mac;
+        const dev = (appData?.devices || []).find((d) => d.mac === mac);
+        editingAliasMac = mac;
+        editingAliasValue = dev?.alias || dev?.displayName || '';
+        editingAliasPinned = Boolean(dev?.isPinned);
+        render();
+        const input = document.querySelector(`#devicesList [data-device-mac="${CSS.escape(mac)}"] input[data-role="alias-input"]`);
+        if (input) {
+          input.focus();
+          input.select();
         }
-      });
-      document.getElementById('setupResult').textContent = `${res.test.ok ? 'OK' : 'WARN'}: ${res.test.detail}`;
-      toast('Router config saved');
-      await load();
+        return;
+      }
+
+      if (action === 'cancel-alias') {
+        editingAliasMac = null;
+        editingAliasValue = '';
+        render();
+        return;
+      }
+
+      if (action === 'save-alias') {
+        const mac = btn.dataset.mac;
+        const row = btn.closest('.row');
+        const input = row?.querySelector('input[data-role="alias-input"]');
+        const name = (input ? input.value : editingAliasValue).trim();
+        await runAction(btn, async () => {
+          await api('/api/devices/alias', {
+            method: 'POST',
+            body: { mac, name, alias: name }
+          });
+          editingAliasMac = null;
+          editingAliasValue = '';
+          toast(name ? `Renamed device to ${name}` : 'Cleared device alias', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'pin-device') {
+        const mac = btn.dataset.mac;
+        const dev = (appData?.devices || []).find((d) => d.mac === mac);
+        const nextPinned = !Boolean(dev?.isPinned);
+        await runAction(btn, async () => {
+          await api('/api/devices/alias', {
+            method: 'POST',
+            body: { mac, pinned: nextPinned }
+          });
+          toast(nextPinned ? 'Device pinned to top' : 'Device unpinned', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'pause-device') {
+        const mac = btn.dataset.mac;
+        const row = btn.closest('.row');
+        const sel = row?.querySelector('select[data-role="pause-duration"]');
+        const rawDur = sel ? sel.value : '60';
+        const duration = rawDur === '' ? null : Number(rawDur);
+        await runAction(btn, async () => {
+          const res = await api('/api/devices/pause', {
+            method: 'POST',
+            body: { target: mac, mac, duration }
+          });
+          if (res.sync && res.sync.ok === false) {
+            toast(`Paused in studio, router sync warning: ${res.sync.detail || 'check router'}`, 'warn');
+          } else {
+            toast(duration ? `Device paused (${duration}m)` : 'Device paused until resumed', 'ok');
+          }
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'resume-device') {
+        const mac = btn.dataset.mac;
+        await runAction(btn, async () => {
+          const res = await api('/api/devices/resume', {
+            method: 'POST',
+            body: { target: mac, mac }
+          });
+          if (res.sync && res.sync.ok === false) {
+            toast(`Resumed in studio, router sync warning: ${res.sync.detail || 'check router'}`, 'warn');
+          } else {
+            toast('Device resumed', 'ok');
+          }
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'prefill-quota') {
+        document.getElementById('qName').value = btn.dataset.name || '';
+        document.getElementById('qMacs').value = btn.dataset.mac || '';
+        renderMacPickers();
+        document.getElementById('qLimit').focus();
+        return;
+      }
+
+      if (action === 'quota-bonus') {
+        const id = btn.dataset.id;
+        await runAction(btn, async () => {
+          await api('/api/quotas/bonus', { method: 'POST', body: { id, minutes: '30m' } });
+          toast('Added +30m bonus', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'quota-reset') {
+        const id = btn.dataset.id;
+        await runAction(btn, async () => {
+          await api('/api/quotas/reset', { method: 'POST', body: { id } });
+          toast('Reset today usage to 0m', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'quota-edit') {
+        const id = btn.dataset.id;
+        const q = (appData?.quotas || []).find((item) => item.id === id);
+        if (!q) return;
+        editingQuotaId = q.id;
+        document.getElementById('quotaFormTitle').textContent = `Edit Quota: ${q.name}`;
+        document.getElementById('addQuotaBtn').textContent = 'Update Quota';
+        document.getElementById('cancelQuotaEditBtn').classList.remove('hidden');
+        document.getElementById('qName').value = q.name || '';
+        document.getElementById('qMacs').value = (q.macs || q.targetMacs || []).join(', ');
+        const mins = Math.max(1, Math.round((q.dailyLimitSeconds || 5400) / 60));
+        document.getElementById('qLimit').value = `${mins}m`;
+        showBanner(document.getElementById('quotaFormError'), '');
+        renderMacPickers();
+        document.getElementById('qName').focus();
+        return;
+      }
+
+      if (action === 'quota-delete') {
+        const id = btn.dataset.id;
+        await runAction(btn, async () => {
+          await api(`/api/quotas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (editingQuotaId === id) resetQuotaForm();
+          toast('Quota removed', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'sched-toggle') {
+        const id = btn.dataset.id;
+        const enabled = btn.dataset.enabled === 'true';
+        await runAction(btn, async () => {
+          await api('/api/schedules/toggle', { method: 'POST', body: { id, enabled } });
+          toast(enabled ? 'Schedule enabled' : 'Schedule disabled', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'sched-edit') {
+        const id = btn.dataset.id;
+        const s = (appData?.schedules || appData?.state?.schedules || []).find((item) => item.id === id);
+        if (!s) return;
+        editingScheduleId = s.id;
+        document.getElementById('schedFormTitle').textContent = `Edit Schedule: ${s.name}`;
+        document.getElementById('addSchedBtn').textContent = 'Update Schedule';
+        document.getElementById('cancelSchedEditBtn').classList.remove('hidden');
+        document.getElementById('sName').value = s.name || '';
+        document.getElementById('sMacs').value = (s.targetMacs || []).join(', ');
+        document.getElementById('sStart').value = s.startTime || '21:00';
+        document.getElementById('sEnd').value = s.endTime || '07:00';
+        selectedSchedDays = new Set(s.days || DEFAULT_SCHED_DAYS);
+        showBanner(document.getElementById('schedFormError'), '');
+        renderSchedDays();
+        renderMacPickers();
+        document.getElementById('sName').focus();
+        return;
+      }
+
+      if (action === 'sched-delete') {
+        const id = btn.dataset.id;
+        await runAction(btn, async () => {
+          await api(`/api/schedules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (editingScheduleId === id) resetScheduleForm();
+          toast('Schedule deleted', 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'toggle-cat') {
+        const category = btn.dataset.category;
+        const enabled = btn.dataset.enabled === 'true';
+        await runAction(btn, async () => {
+          await api('/api/dns/category', { method: 'POST', body: { category, enabled } });
+          toast(`${enabled ? 'Blocked' : 'Unblocked'} ${category}`, 'ok');
+          await load();
+        });
+        return;
+      }
+
+      if (action === 'unblock-domain') {
+        const domain = btn.dataset.domain;
+        await runAction(btn, async () => {
+          await api('/api/dns/domain', { method: 'POST', body: { domain, action: 'unblock' } });
+          toast(`Unblocked ${domain}`, 'ok');
+          await load();
+        });
+        return;
+      }
     });
+
+    // Keep MAC picker chips synchronized on manual typing
+    document.getElementById('qMacs').addEventListener('input', renderMacPickers);
+    document.getElementById('sMacs').addEventListener('input', renderMacPickers);
+
+    // Cancel edit buttons
+    document.getElementById('cancelQuotaEditBtn').addEventListener('click', resetQuotaForm);
+    document.getElementById('cancelSchedEditBtn').addEventListener('click', resetScheduleForm);
+
+    // Refresh & Auto-Refresh
+    document.getElementById('refreshBtn').addEventListener('click', (e) => {
+      runAction(e.currentTarget, () => load(), { busyText: 'Refreshing...' });
+    });
+
+    document.getElementById('autoRefreshBtn').addEventListener('click', () => {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const btn = document.getElementById('autoRefreshBtn');
+      btn.setAttribute('aria-pressed', autoRefreshEnabled ? 'true' : 'false');
+      document.getElementById('autoRefreshLabel').textContent = autoRefreshEnabled ? 'Auto: On' : 'Auto: Off';
+      toast(autoRefreshEnabled ? 'Auto-refresh enabled (15s)' : 'Auto-refresh paused', 'ok');
+    });
+
+    function uniqueRuleId(name, existingList, fallbackPrefix) {
+      const baseSlug = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `${fallbackPrefix}-${Date.now().toString(36)}`;
+      const existingIds = new Set((existingList || []).map((item) => item.id));
+      if (!existingIds.has(baseSlug)) return baseSlug;
+      let n = 2;
+      while (existingIds.has(`${baseSlug}-${n}`)) n++;
+      return `${baseSlug}-${n}`;
+    }
+
+    // Save Quota
+    document.getElementById('addQuotaBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const errorEl = document.getElementById('quotaFormError');
+      const name = document.getElementById('qName').value.trim();
+      const macsRaw = document.getElementById('qMacs').value;
+      const macs = parseMacInputList(macsRaw);
+      const limit = document.getElementById('qLimit').value.trim();
+
+      if (!name) {
+        const msg = 'Quota name is required';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        document.getElementById('qName').focus();
+        return;
+      }
+      if (macs.length === 0) {
+        const msg = 'Enter at least one valid MAC address';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        document.getElementById('qMacs').focus();
+        return;
+      }
+      if (!limit) {
+        const msg = 'Daily limit is required (e.g. 1h30m)';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        document.getElementById('qLimit').focus();
+        return;
+      }
+
+      const prevEditingId = editingQuotaId;
+      const targetId = prevEditingId || uniqueRuleId(name, appData?.quotas, 'quota');
+      const prevQuotas = appData ? [...(appData.quotas || [])] : null;
+      const prevAudit = appData ? [...(appData.auditLog || [])] : null;
+      mutationSeq++;
+
+      await runAction(btn, async () => {
+        const body = { id: targetId, name, macs, targetMacs: macs, limit };
+        const parsedMins = parseDurationMinutesUi(limit);
+        const allMacsValid = macs.every((m) => /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(m) || /^([0-9a-f]{2}-){5}[0-9a-f]{2}$/i.test(m));
+        const appliedOptimistic = Boolean(appData && parsedMins && parsedMins > 0 && allMacsValid);
+        if (appliedOptimistic) {
+          const optId = targetId;
+          const limitSec = parsedMins * 60;
+          const formattedLimit = formatDurationUi(limitSec);
+          const existing = prevEditingId ? (appData.quotas || []).find((q) => q.id === prevEditingId) : null;
+          const usedSec = existing ? (existing.usedSeconds || 0) : 0;
+          const remSec = Math.max(0, limitSec + (existing?.bonusSeconds || 0) - usedSec);
+          const optimisticQuota = {
+            id: optId,
+            name,
+            macs,
+            targetMacs: macs,
+            enabled: true,
+            usedSeconds: usedSec,
+            limitSeconds: limitSec + (existing?.bonusSeconds || 0),
+            remainingSeconds: remSec,
+            blockedToday: false,
+            usedFormatted: formatDurationUi(usedSec),
+            limitFormatted: formatDurationUi(limitSec + (existing?.bonusSeconds || 0)),
+            remainingFormatted: formatDurationUi(remSec)
+          };
+          const list = [...(appData.quotas || [])];
+          const idx = prevEditingId ? list.findIndex((q) => q.id === prevEditingId) : -1;
+          if (idx >= 0) list[idx] = { ...list[idx], ...optimisticQuota };
+          else list.push(optimisticQuota);
+          appData.quotas = list;
+          appData.auditLog = [
+            { ts: new Date().toISOString(), action: 'QUOTA_SET', target: optId, detail: `${name} (${formattedLimit}/day)` },
+            ...(appData.auditLog || [])
+          ];
+          resetQuotaForm();
+          render();
+        }
+        try {
+          await api('/api/quotas', { method: 'POST', body });
+        } catch (err) {
+          if (appliedOptimistic) {
+            if (appData && prevQuotas) appData.quotas = prevQuotas;
+            if (appData && prevAudit) appData.auditLog = prevAudit;
+            editingQuotaId = prevEditingId;
+            if (prevEditingId) {
+              document.getElementById('quotaFormTitle').textContent = `Edit Quota: ${name}`;
+              document.getElementById('addQuotaBtn').textContent = 'Update Quota';
+              document.getElementById('cancelQuotaEditBtn').classList.remove('hidden');
+            }
+            document.getElementById('qName').value = name;
+            document.getElementById('qMacs').value = macsRaw;
+            document.getElementById('qLimit').value = limit;
+            render();
+          }
+          throw err;
+        }
+        if (!appliedOptimistic) resetQuotaForm();
+        toast(prevEditingId ? `Updated quota: ${name}` : `Saved quota: ${name} (${limit}/day)`, 'ok');
+        await load();
+      }, { errorEl, busyText: 'Saving...' });
+    });
+
+    // Save Schedule
+    document.getElementById('addSchedBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const errorEl = document.getElementById('schedFormError');
+      const name = document.getElementById('sName').value.trim();
+      const macsRaw = document.getElementById('sMacs').value;
+      const targetMacs = parseMacInputList(macsRaw);
+      const startTime = document.getElementById('sStart').value.trim();
+      const endTime = document.getElementById('sEnd').value.trim();
+      const days = DAY_ORDER.filter((d) => selectedSchedDays.has(d));
+
+      if (!name) {
+        const msg = 'Schedule name is required';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        document.getElementById('sName').focus();
+        return;
+      }
+      if (targetMacs.length === 0) {
+        const msg = 'Enter at least one valid target MAC address';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        document.getElementById('sMacs').focus();
+        return;
+      }
+      if (days.length === 0) {
+        const msg = 'Select at least one day of the week';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        return;
+      }
+      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(startTime) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(endTime)) {
+        const msg = 'Enter valid 24-hour HH:MM start and end times';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        return;
+      }
+      if (startTime === endTime) {
+        const msg = 'Start time and end time must differ';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        return;
+      }
+
+      const prevEditingId = editingScheduleId;
+      const targetId = prevEditingId || uniqueRuleId(name, appData?.schedules || appData?.state?.schedules, 'sched');
+      const prevSchedules = appData ? [...(appData.schedules || [])] : null;
+      const prevAudit = appData ? [...(appData.auditLog || [])] : null;
+      mutationSeq++;
+
+      await runAction(btn, async () => {
+        const body = { id: targetId, name, targetMacs, days, startTime, endTime };
+        if (appData) {
+          const optId = targetId;
+          const optimisticSched = { id: optId, name, targetMacs, days, startTime, endTime, enabled: true };
+          const list = [...(appData.schedules || [])];
+          const idx = prevEditingId ? list.findIndex((s) => s.id === prevEditingId) : -1;
+          if (idx >= 0) list[idx] = { ...list[idx], ...optimisticSched };
+          else list.push(optimisticSched);
+          appData.schedules = list;
+          appData.auditLog = [
+            { ts: new Date().toISOString(), action: 'SCHEDULE_SET', target: optId, detail: `${name} (${startTime}-${endTime})` },
+            ...(appData.auditLog || [])
+          ];
+          resetScheduleForm();
+          render();
+        }
+        try {
+          await api('/api/schedules', { method: 'POST', body });
+        } catch (err) {
+          if (appData && prevSchedules) appData.schedules = prevSchedules;
+          if (appData && prevAudit) appData.auditLog = prevAudit;
+          editingScheduleId = prevEditingId;
+          if (prevEditingId) {
+            document.getElementById('schedFormTitle').textContent = `Edit Schedule: ${name}`;
+            document.getElementById('addSchedBtn').textContent = 'Update Schedule';
+            document.getElementById('cancelSchedEditBtn').classList.remove('hidden');
+          }
+          document.getElementById('sName').value = name;
+          document.getElementById('sMacs').value = macsRaw;
+          document.getElementById('sStart').value = startTime;
+          document.getElementById('sEnd').value = endTime;
+          selectedSchedDays = new Set(days);
+          render();
+          throw err;
+        }
+        toast(prevEditingId ? `Updated schedule: ${name}` : `Saved schedule: ${name}`, 'ok');
+        await load();
+      }, { errorEl, busyText: 'Saving...' });
+    });
+
+    // Block custom domain
+    document.getElementById('blockDomainBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const errorEl = document.getElementById('dnsFormError');
+      const input = document.getElementById('customDomain');
+      const domain = input.value.trim();
+      if (!domain) {
+        const msg = 'Enter a domain to block';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        input.focus();
+        return;
+      }
+      await runAction(btn, async () => {
+        await api('/api/dns/domain', { method: 'POST', body: { domain, action: 'block' } });
+        input.value = '';
+        toast(`Blocked ${domain}`, 'ok');
+        await load();
+      }, { errorEl, busyText: 'Blocking...' });
+    });
+
+    // Live UDP DNS test
+    document.getElementById('testDnsBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const errorEl = document.getElementById('dnsFormError');
+      const input = document.getElementById('testDomain');
+      const domain = input.value.trim();
+      if (!domain) {
+        const msg = 'Enter a domain to test';
+        showBanner(errorEl, msg, 'danger');
+        toast(msg, 'danger');
+        input.focus();
+        return;
+      }
+      await runAction(btn, async () => {
+        const res = await api('/api/dns/test', { method: 'POST', body: { domain } });
+        const r = res.result || res;
+        const outEl = document.getElementById('dnsTestOut');
+        if (r.ok) {
+          outEl.textContent = `${r.domain} → ${r.resolvedIp || 'no A record'} (${r.sinkholed ? 'BLOCKED by sinkhole' : 'ALLOWED'})`;
+          toast(`${r.domain}: ${r.sinkholed ? 'BLOCKED' : 'ALLOWED'}`, 'ok');
+        } else {
+          outEl.textContent = `Error: ${r.error || 'DNS test failed'}`;
+          toast(r.error || 'DNS test failed', 'warn');
+        }
+        await load();
+      }, { errorEl, busyText: 'Testing...' });
+    });
+
+    // Setup dirty tracking & driver change
+    document.getElementById('setupDriver').addEventListener('change', (e) => {
+      const savedDriver = appData?.router?.driver || 'universal';
+      const passEl = document.getElementById('setupPass');
+      if (passEl) {
+        if (e.target.value !== savedDriver) {
+          passEl.value = '';
+        } else if (appData?.router?.hasPassword || appData?.router?.passwordConfigured) {
+          passEl.value = '••••••••';
+        }
+      }
+      setSetupDirty(true);
+      updateAdapterFields(true);
+    });
+    for (const id of ['setupGateway', 'setupUser', 'setupPass', 'setupBlockCmd', 'setupUnblockCmd', 'setupListCmd', 'setupPollInterval']) {
+      document.getElementById(id).addEventListener('input', () => setSetupDirty(true));
+    }
+
+    // Auto-Detect router
+    document.getElementById('detectBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const errorEl = document.getElementById('setupFormError');
+      await runAction(btn, async () => {
+        const res = await api('/api/router/detect');
+        document.getElementById('setupDriver').value = res.matchedDriver;
+        document.getElementById('setupGateway').value = res.gatewayUrl || '';
+        const savedDriver = appData?.router?.driver || 'universal';
+        const passEl = document.getElementById('setupPass');
+        if (passEl) {
+          if (res.matchedDriver !== savedDriver) {
+            passEl.value = '';
+          } else if (appData?.router?.hasPassword || appData?.router?.passwordConfigured) {
+            passEl.value = '••••••••';
+          }
+        }
+        setSetupDirty(true);
+        updateAdapterFields(false);
+        document.getElementById('detectHint').textContent = `Detected: ${res.modelHint} at ${res.gatewayIp}`;
+        toast(`Detected ${res.matchedDriver}`, 'ok');
+      }, { errorEl, busyText: 'Detecting...' });
+    });
+
+    // Save Setup
+    document.getElementById('saveSetupBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const errorEl = document.getElementById('setupFormError');
+      const resultEl = document.getElementById('setupResult');
+      const driver = document.getElementById('setupDriver').value;
+      const gatewayUrl = document.getElementById('setupGateway').value.trim();
+      const username = document.getElementById('setupUser').value.trim();
+      const password = document.getElementById('setupPass').value;
+      const blockCmd = document.getElementById('setupBlockCmd').value.trim();
+      const unblockCmd = document.getElementById('setupUnblockCmd').value.trim();
+      const listCmd = document.getElementById('setupListCmd').value.trim();
+      const pollRaw = document.getElementById('setupPollInterval').value.trim();
+      const pollIntervalSec = Number(pollRaw);
+
+      if (!Number.isInteger(pollIntervalSec) || pollIntervalSec < 5 || pollIntervalSec > 3600) {
+        const msg = 'Poll interval must be a whole number between 5 and 3600 seconds';
+        showBanner(errorEl, msg, 'danger');
+        resultEl.className = 'pill blocked';
+        resultEl.textContent = `Error: ${msg}`;
+        toast(msg, 'danger');
+        document.getElementById('setupPollInterval').focus();
+        return;
+      }
+
+      if (driver !== 'universal' && driver !== 'custom' && !/^https?:\/\//i.test(gatewayUrl)) {
+        const msg = `Valid http:// or https:// gateway URL is required for ${driver}`;
+        showBanner(errorEl, msg, 'danger');
+        resultEl.className = 'pill blocked';
+        resultEl.textContent = `Error: ${msg}`;
+        toast(msg, 'danger');
+        document.getElementById('setupGateway').focus();
+        return;
+      }
+
+      await runAction(btn, async () => {
+        let res;
+        try {
+          res = await api('/api/setup', {
+            method: 'POST',
+            body: {
+              driver,
+              gatewayUrl,
+              username,
+              password,
+              customHooks: { blockCmd, unblockCmd, listCmd },
+              pollIntervalSec
+            }
+          });
+        } catch (err) {
+          resultEl.className = 'pill blocked';
+          resultEl.textContent = 'Error: ' + (err?.message || 'Save failed');
+          throw err;
+        }
+        setSetupDirty(false);
+        const testOk = Boolean(res.test?.ok);
+        const detail = res.test?.detail || (testOk ? 'Connected' : 'Connection warning');
+        resultEl.textContent = `${testOk ? 'OK' : 'WARN'}: ${detail}`;
+        resultEl.className = testOk ? 'pill online' : 'pill warn';
+        toast(testOk ? 'Router connected & config saved' : `Saved with warning: ${detail}`, testOk ? 'ok' : 'warn');
+        await load();
+      }, { errorEl, busyText: 'Testing...' });
+    });
+
+    // Reset Setup form to persisted state
+    document.getElementById('resetSetupBtn').addEventListener('click', () => {
+      if (!appData) return;
+      hydrateSetupForm(appData);
+      showBanner(document.getElementById('setupFormError'), '');
+      const resultEl = document.getElementById('setupResult');
+      resultEl.textContent = '';
+      resultEl.className = 'mono';
+      toast('Setup form reset to saved configuration', 'ok');
+    });
+
+    // 15s background auto-refresh
+    setInterval(() => {
+      if (!autoRefreshEnabled || document.hidden || loadInFlight) return;
+      load({ silent: true });
+    }, 15000);
 
     load();
   </script>

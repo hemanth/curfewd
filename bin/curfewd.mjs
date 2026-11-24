@@ -29,6 +29,43 @@ Usage:
 `);
 }
 
+function parsePortOption(argv, flag) {
+  const eqPrefix = `${flag}=`;
+  const eqArg = argv.find((a) => a.startsWith(eqPrefix));
+  let raw;
+  if (eqArg !== undefined) {
+    raw = eqArg.slice(eqPrefix.length);
+  } else {
+    const idx = argv.indexOf(flag);
+    if (idx < 0) return undefined;
+    raw = argv[idx + 1];
+  }
+  if (raw === undefined || raw === '' || raw.startsWith('-')) {
+    throw new Error(`Invalid ${flag}: expected integer 0-65535`);
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 65535) {
+    throw new Error(`Invalid ${flag}: expected integer 0-65535`);
+  }
+  return n;
+}
+
+function parseHostOption(argv) {
+  const eqArg = argv.find((a) => a.startsWith('--host='));
+  if (eqArg !== undefined) {
+    const h = eqArg.slice('--host='.length).trim();
+    if (!h) throw new Error('Invalid --host: hostname or IP is required');
+    return h;
+  }
+  const idx = argv.indexOf('--host');
+  if (idx < 0) return '127.0.0.1';
+  const h = argv[idx + 1];
+  if (!h || h.startsWith('-')) {
+    throw new Error('Invalid --host: hostname or IP is required');
+  }
+  return h;
+}
+
 async function main() {
   if (cmd === '-h' || cmd === '--help' || cmd === 'help') {
     printHelp();
@@ -61,23 +98,39 @@ async function main() {
   }
 
   if (cmd === 'serve') {
-    const portIdx = args.indexOf('--port');
-    const port = portIdx >= 0 ? Number(args[portIdx + 1]) : undefined;
-    const dnsIdx = args.indexOf('--dns-port');
-    const dnsPort = dnsIdx >= 0 ? Number(args[dnsIdx + 1]) : undefined;
-    const hostIdx = args.indexOf('--host');
-    const host = hostIdx >= 0 ? args[hostIdx + 1] : '127.0.0.1';
+    const port = parsePortOption(args, '--port');
+    const dnsPort = parsePortOption(args, '--dns-port');
+    const host = parseHostOption(args);
     const srv = await startServer({ port, dnsPort, host });
     console.log(`curfewd web studio: ${srv.url}`);
     console.log(`curfewd DNS sinkhole: UDP :${srv.dnsPort}`);
+    let closing = false;
+    const shutdown = async () => {
+      if (closing) return;
+      closing = true;
+      await srv.close().catch(() => {});
+      process.exit(0);
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
     return;
   }
 
   const engine = new CurfewEngine();
 
   if (cmd === 'daemon') {
+    let stopDaemon = null;
+    let closing = false;
+    const shutdown = () => {
+      if (closing) return;
+      closing = true;
+      if (stopDaemon) stopDaemon();
+      process.exit(0);
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
+    stopDaemon = engine.startDaemon();
     console.log('[curfewd] daemon running...');
-    engine.startDaemon();
     return;
   }
 
@@ -121,6 +174,9 @@ async function main() {
     const duration = args[2] || null;
     if (!target) throw new Error('Usage: curfewd pause <name|mac> [duration]');
     const res = await engine.pauseDevice(target, duration);
+    if (res.sync && res.sync.ok === false) {
+      console.warn(`Warning: router sync failed: ${res.sync.detail || 'unknown error'}`);
+    }
     console.log(`Paused ${res.mac}${res.durationMinutes ? ` for ${res.durationMinutes}m` : ' until resumed'} (${res.sync?.mode || 'local'})`);
     return;
   }
@@ -129,6 +185,9 @@ async function main() {
     const target = args[1];
     if (!target) throw new Error('Usage: curfewd resume <name|mac>');
     const res = await engine.resumeDevice(target);
+    if (res.sync && res.sync.ok === false) {
+      console.warn(`Warning: router sync failed: ${res.sync.detail || 'unknown error'}`);
+    }
     console.log(`Resumed ${res.mac} (${res.sync?.mode || 'local'})`);
     return;
   }
@@ -146,12 +205,14 @@ async function main() {
       return;
     }
     if (sub === 'add' || sub === 'bonus') {
+      if (!args[2]) throw new Error('Usage: curfewd quota add <name|id> [duration]');
       const q = engine.addQuotaBonus(args[2], args[3] || '30m');
       await engine.tick().catch(() => {});
       console.log(`Added bonus to "${q.name}"`);
       return;
     }
     if (sub === 'reset') {
+      if (!args[2]) throw new Error('Usage: curfewd quota reset <name|id>');
       const q = engine.resetQuotaToday(args[2]);
       await engine.tick().catch(() => {});
       console.log(`Reset "${q.name}" usage for ${todayKey()}`);
@@ -163,12 +224,14 @@ async function main() {
   }
 
   if (cmd === 'block') {
+    if (!args[1]) throw new Error('Usage: curfewd block <domain>');
     const d = engine.blockDomain(args[1]);
     console.log(`Blocked *.${d} in local DNS sinkhole`);
     return;
   }
 
   if (cmd === 'unblock') {
+    if (!args[1]) throw new Error('Usage: curfewd unblock <domain>');
     engine.unblockDomain(args[1]);
     console.log(`Unblocked ${args[1]}`);
     return;

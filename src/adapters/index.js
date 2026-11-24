@@ -32,7 +32,7 @@ const ADAPTER_CLASSES = {
 
 export function createAdapter(routerConfig = {}) {
   const id = routerConfig.driver || 'universal';
-  const Cls = ADAPTER_CLASSES[id] || UniversalAdapter;
+  const Cls = Object.hasOwn(ADAPTER_CLASSES, id) ? ADAPTER_CLASSES[id] : UniversalAdapter;
   return new Cls(routerConfig);
 }
 

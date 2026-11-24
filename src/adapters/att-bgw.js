@@ -75,7 +75,14 @@ export class AttBgwAdapter {
           headers: this.sessionCookie ? { Cookie: this.sessionCookie, Connection: 'close' } : { Connection: 'close' },
           signal: AbortSignal.timeout(options.timeoutMs || 8000)
         });
+        if (r2.status >= 400) {
+          throw new Error(`AT&T BGW HTTP ${r2.status}`);
+        }
         return { status: r2.status, html: await r2.text(), url: `${this.baseUrl}${nextPath}` };
+      }
+
+      if (res.status >= 400) {
+        throw new Error(`AT&T BGW HTTP ${res.status}`);
       }
 
       return { status: res.status, html: await res.text(), url };
@@ -84,6 +91,22 @@ export class AttBgwAdapter {
     const next = this._queue.then(run, run);
     this._queue = next.catch(() => {});
     return next;
+  }
+
+  _extractNonce(html, formAction = null) {
+    let scope = String(html || '');
+    if (formAction) {
+      const escaped = formAction.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const formMatch = scope.match(new RegExp(`<form[^>]*action="${escaped}"[^>]*>[\\s\\S]*?<\\/form>`, 'i'));
+      if (formMatch) scope = formMatch[0];
+    }
+    const nonce =
+      scope.match(/name="nonce"\s+value="([^"]+)"/i)?.[1] ||
+      scope.match(/value="([^"]+)"\s+name="nonce"/i)?.[1];
+    if (!nonce) {
+      throw new Error('Missing login/CSRF nonce on AT&T BGW page');
+    }
+    return nonce;
   }
 
   async authenticate() {
@@ -112,16 +135,20 @@ export class AttBgwAdapter {
   }
 
   async testConnection() {
-    const { html } = await this.request('/cgi-bin/sysinfo.ha');
-    const model = html.match(/<th[^>]*>\s*Model Number\s*<\/th>\s*<td[^>]*>([\s\S]*?)<\/td>/i)?.[1]?.replace(/<[^>]+>/g, '').trim();
-    if (!model && !/BGW|HUMAX|Arris/i.test(html)) {
-      return { ok: false, model: null, detail: `Gateway at ${this.baseUrl} did not respond as AT&T BGW` };
+    try {
+      const { html } = await this.request('/cgi-bin/sysinfo.ha');
+      const model = html.match(/<th[^>]*>\s*Model Number\s*<\/th>\s*<td[^>]*>([\s\S]*?)<\/td>/i)?.[1]?.replace(/<[^>]+>/g, '').trim();
+      if (!model && !/BGW|HUMAX|Arris/i.test(html)) {
+        return { ok: false, model: null, detail: `Gateway at ${this.baseUrl} did not respond as AT&T BGW` };
+      }
+      if (this.accessCode) {
+        const auth = await this.authenticate();
+        if (!auth.ok) return { ok: false, model: model || 'AT&T BGW', detail: auth.reason };
+      }
+      return { ok: true, model: model || 'AT&T BGW', detail: `Connected to ${model || 'AT&T BGW'} at ${this.baseUrl}` };
+    } catch (err) {
+      return { ok: false, model: null, detail: err.message };
     }
-    if (this.accessCode) {
-      const auth = await this.authenticate();
-      if (!auth.ok) return { ok: false, model: model || 'AT&T BGW', detail: auth.reason };
-    }
-    return { ok: true, model: model || 'AT&T BGW', detail: `Connected to ${model || 'AT&T BGW'} at ${this.baseUrl}` };
   }
 
   async listDevices() {
@@ -172,121 +199,141 @@ export class AttBgwAdapter {
   async _ensurePacketFiltersEnabled() {
     const { html } = await this.request('/cgi-bin/packetfilter.ha');
     if (html.includes('name="Enable"')) {
-      const nonce = html.match(/name="nonce"\s+value="([^"]+)"/i)?.[1];
-      if (nonce) {
-        await this.request('/cgi-bin/packetfilter.ha', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ nonce, Enable: 'Enable Packet Filters' }).toString()
-        });
-      }
+      const nonce = this._extractNonce(html);
+      await this.request('/cgi-bin/packetfilter.ha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ nonce, Enable: 'Enable Packet Filters' }).toString()
+      });
     }
   }
 
   async isDeviceBlocked({ mac }) {
-    const auth = await this.authenticate();
-    if (!auth.ok) return null;
-    const { html } = await this.request('/cgi-bin/packetfilter.ha');
-    if (!html.includes('name="Disable"')) return false;
-    return html.toLowerCase().includes(normalizeMac(mac));
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return false;
+    try {
+      const auth = await this.authenticate();
+      if (!auth.ok) return null;
+      const { html } = await this.request('/cgi-bin/packetfilter.ha');
+      if (!html.includes('name="Disable"')) return false;
+      return html.toLowerCase().includes(cleanMac);
+    } catch {
+      return null;
+    }
   }
 
   async blockDevice({ mac, ipv4 = null, ipv6List = [] }) {
-    const auth = await this.authenticate();
-    if (!auth.ok) return { ok: false, mode: 'att-bgw', detail: auth.reason };
     const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return { ok: false, mode: 'att-bgw', detail: 'Invalid MAC address' };
 
-    const addOne = async (category, value) => {
-      if (!value) return null;
-      let { html } = await this.request('/cgi-bin/packetfilter.ha');
-      if (html.toLowerCase().includes(value.toLowerCase())) return { category, value, status: 'exists' };
-      const nonce1 = html.match(/name="nonce"\s+value="([^"]+)"/i)?.[1];
-      html = (await this.request('/cgi-bin/packetfilter.ha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ nonce: nonce1, AddDropRule: "Add a 'Drop' Rule" }).toString()
-      })).html;
-      const ids = [...html.matchAll(/name="AddMatch_(\d+)"/g)].map((m) => m[1]);
-      const ruleId = ids[ids.length - 1];
-      if (!ruleId) return null;
+    try {
+      const auth = await this.authenticate();
+      if (!auth.ok) return { ok: false, mode: 'att-bgw', detail: auth.reason };
 
-      const nonce2 = html.match(/name="nonce"\s+value="([^"]+)"/i)?.[1];
-      const mRes = await this.request('/cgi-bin/packetfilter.ha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ nonce: nonce2, [`AddMatch_${ruleId}`]: 'Add Match...' }).toString()
-      });
-      const editNonce1 = mRes.html.match(/action="\/cgi-bin\/packetfilteredit\.ha"[\s\S]*?name="nonce"\s+value="([^"]+)"/i)?.[1];
-      const uRes = await this.request('/cgi-bin/packetfilteredit.ha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ nonce: editNonce1, category, Update: 'Update' }).toString()
-      });
-      const editNonce2 = uRes.html.match(/action="\/cgi-bin\/packetfilteredit\.ha"[\s\S]*?name="nonce"\s+value="([^"]+)"/i)?.[1];
+      const addOne = async (category, value) => {
+        if (!value) return null;
+        let { html } = await this.request('/cgi-bin/packetfilter.ha');
+        if (html.toLowerCase().includes(value.toLowerCase())) return { category, value, status: 'exists' };
+        const nonce1 = this._extractNonce(html);
+        html = (await this.request('/cgi-bin/packetfilter.ha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ nonce: nonce1, AddDropRule: "Add a 'Drop' Rule" }).toString()
+        })).html;
+        const ids = [...html.matchAll(/name="AddMatch_(\d+)"/g)].map((m) => m[1]);
+        const ruleId = ids[ids.length - 1];
+        if (!ruleId) return null;
 
-      const payload = { nonce: editNonce2, category, RuleComplete: 'on', EnterMatch: 'Enter Match' };
-      if (category.includes('mac')) {
-        payload.maclist = '';
-        payload.hostmac = value;
-      } else {
-        payload.ipaddr = value;
+        const nonce2 = this._extractNonce(html);
+        const mRes = await this.request('/cgi-bin/packetfilter.ha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ nonce: nonce2, [`AddMatch_${ruleId}`]: 'Add Match...' }).toString()
+        });
+        const editNonce1 = this._extractNonce(mRes.html, '/cgi-bin/packetfilteredit.ha');
+        const uRes = await this.request('/cgi-bin/packetfilteredit.ha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ nonce: editNonce1, category, Update: 'Update' }).toString()
+        });
+        const editNonce2 = this._extractNonce(uRes.html, '/cgi-bin/packetfilteredit.ha');
+
+        const payload = { nonce: editNonce2, category, RuleComplete: 'on', EnterMatch: 'Enter Match' };
+        if (category.includes('mac')) {
+          payload.maclist = '';
+          payload.hostmac = value;
+        } else {
+          payload.ipaddr = value;
+        }
+        await this.request('/cgi-bin/packetfilteredit.ha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(payload).toString()
+        });
+        return { ruleId, category, value };
+      };
+
+      const rules = [];
+      for (const [cat, val] of [
+        ['src-host-mac', cleanMac],
+        ['dst-host-mac', cleanMac],
+        ...(ipv4 ? [['src-ip-addr', ipv4], ['dst-ip-addr', ipv4]] : []),
+        ...(ipv6List || []).filter((x) => !x.startsWith('fe80:')).map((ip6) => ['dst-ip-addr', ip6])
+      ]) {
+        const r = await addOne(cat, val);
+        if (r) rules.push(r);
       }
-      await this.request('/cgi-bin/packetfilteredit.ha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(payload).toString()
-      });
-      return { ruleId, category, value };
-    };
-
-    const rules = [];
-    for (const [cat, val] of [
-      ['src-host-mac', cleanMac],
-      ['dst-host-mac', cleanMac],
-      ...(ipv4 ? [['src-ip-addr', ipv4], ['dst-ip-addr', ipv4]] : []),
-      ...(ipv6List || []).filter((x) => !x.startsWith('fe80:')).map((ip6) => ['dst-ip-addr', ip6])
-    ]) {
-      const r = await addOne(cat, val);
-      if (r) rules.push(r);
+      if (rules.length === 0) {
+        return { ok: false, mode: 'att-bgw', detail: 'Could not create packetfilter Drop rule on AT&T BGW' };
+      }
+      await this._ensurePacketFiltersEnabled();
+      return { ok: true, mode: 'bgw-packetfilter-drop', detail: `${rules.length} hardware Drop rules active` };
+    } catch (err) {
+      return { ok: false, mode: 'att-bgw', detail: err.message };
     }
-    await this._ensurePacketFiltersEnabled();
-    return { ok: true, mode: 'bgw-packetfilter-drop', detail: `${rules.length} hardware Drop rules active` };
   }
 
   async unblockDevice({ mac, ipv4 = null, ipv6List = [] }) {
-    const auth = await this.authenticate();
-    if (!auth.ok) return { ok: false, mode: 'att-bgw', detail: auth.reason };
-    const targets = [normalizeMac(mac), ipv4?.toLowerCase(), ...(ipv6List || []).map((x) => x.toLowerCase())].filter(Boolean);
-    const removed = [];
+    const cleanMac = normalizeMac(mac);
+    if (!cleanMac) return { ok: false, mode: 'att-bgw', detail: 'Invalid MAC address' };
 
-    for (let pass = 0; pass < 30; pass++) {
-      const { html } = await this.request('/cgi-bin/packetfilter.ha');
-      const nonce = html.match(/name="nonce"\s+value="([^"]+)"/i)?.[1];
-      let foundId = null;
-      for (const tag of html.matchAll(/<input[^>]*name="Edit_(\d+)_\d+"[^>]*>/gi)) {
-        const lowerTag = tag[0].toLowerCase();
-        if (targets.some((t) => lowerTag.includes(t))) {
-          foundId = tag[1];
-          break;
+    try {
+      const auth = await this.authenticate();
+      if (!auth.ok) return { ok: false, mode: 'att-bgw', detail: auth.reason };
+      const targets = [cleanMac, ipv4?.toLowerCase(), ...(ipv6List || []).map((x) => x.toLowerCase())].filter(Boolean);
+      const removed = [];
+
+      for (let pass = 0; pass < 30; pass++) {
+        const { html } = await this.request('/cgi-bin/packetfilter.ha');
+        let foundId = null;
+        for (const tag of html.matchAll(/<input[^>]*name="Edit_(\d+)_\d+"[^>]*>/gi)) {
+          const lowerTag = tag[0].toLowerCase();
+          if (targets.some((t) => lowerTag.includes(t))) {
+            foundId = tag[1];
+            break;
+          }
         }
-      }
-      if (!foundId) break;
-      let delNonce = nonce;
-      if (html.includes(`name="UnComplete_${foundId}"`)) {
-        const unRes = await this.request('/cgi-bin/packetfilter.ha', {
+        if (!foundId) break;
+        const nonce = this._extractNonce(html);
+        let delNonce = nonce;
+        if (html.includes(`name="UnComplete_${foundId}"`)) {
+          const unRes = await this.request('/cgi-bin/packetfilter.ha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ nonce, [`UnComplete_${foundId}`]: '' }).toString()
+          });
+          delNonce = this._extractNonce(unRes.html);
+        }
+        await this.request('/cgi-bin/packetfilter.ha', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ nonce, [`UnComplete_${foundId}`]: '' }).toString()
+          body: new URLSearchParams({ nonce: delNonce, [`DeleteRule_${foundId}`]: 'Delete' }).toString()
         });
-        delNonce = unRes.html.match(/name="nonce"\s+value="([^"]+)"/i)?.[1] || nonce;
+        removed.push(foundId);
       }
-      await this.request('/cgi-bin/packetfilter.ha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ nonce: delNonce, [`DeleteRule_${foundId}`]: 'Delete' }).toString()
-      });
-      removed.push(foundId);
+      return { ok: true, mode: 'bgw-packetfilter-drop', detail: `Removed ${removed.length} hardware Drop rule(s)` };
+    } catch (err) {
+      return { ok: false, mode: 'att-bgw', detail: err.message };
     }
-    return { ok: true, mode: 'bgw-packetfilter-drop', detail: `Removed ${removed.length} hardware Drop rule(s)` };
   }
 }

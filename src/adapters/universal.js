@@ -1,8 +1,69 @@
 import { execFile } from 'node:child_process';
+import dns from 'node:dns/promises';
 import { promisify } from 'node:util';
 import { normalizeMac } from '../state.js';
 
 const execFileAsync = promisify(execFile);
+const PTR_CACHE = new Map(); // ipv4 -> { name, expiresAt }
+const PTR_TTL_MS = 5 * 60_000;
+let cachedGatewayIp = null;
+
+async function getGatewayIpForPtr(gatewayUrl) {
+  if (gatewayUrl) {
+    try {
+      const host = new URL(gatewayUrl).hostname;
+      if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
+    } catch {}
+  }
+  if (cachedGatewayIp) return cachedGatewayIp;
+  try {
+    const { stdout } = await execFileAsync('route', ['-n', 'get', 'default'], { timeout: 1000 });
+    const m = stdout.match(/gateway:\s*(\d+\.\d+\.\d+\.\d+)/i);
+    if (m) { cachedGatewayIp = m[1]; return cachedGatewayIp; }
+  } catch {}
+  try {
+    const { stdout } = await execFileAsync('ip', ['route', 'show', 'default'], { timeout: 1000 });
+    const m = stdout.match(/default\s+via\s+(\d+\.\d+\.\d+\.\d+)/i);
+    if (m) { cachedGatewayIp = m[1]; return cachedGatewayIp; }
+  } catch {}
+  return null;
+}
+
+function cleanLanHostname(names) {
+  if (!Array.isArray(names) || names.length === 0) return null;
+  const preferred = names.find((n) => !n.includes('.')) || names[0];
+  return preferred.replace(/\.(attlocal\.net|local|lan|home|localdomain)\.?$/i, '').trim() || null;
+}
+
+async function resolveLanHostnames(devices, gatewayUrl) {
+  const candidates = devices.filter((d) => d.ipv4 && /^LAN Host \(/.test(d.name));
+  if (candidates.length === 0) return devices;
+
+  const now = Date.now();
+  const gwIp = await getGatewayIpForPtr(gatewayUrl);
+  const resolver = new dns.Resolver();
+  if (gwIp) {
+    try { resolver.setServers([gwIp]); } catch {}
+  }
+
+  await Promise.all(
+    candidates.map(async (dev) => {
+      const cached = PTR_CACHE.get(dev.ipv4);
+      if (cached && cached.expiresAt > now) {
+        if (cached.name) dev.name = cached.name;
+        return;
+      }
+      const names = await Promise.race([
+        resolver.reverse(dev.ipv4).catch(() => []),
+        new Promise((r) => setTimeout(() => r([]), 350))
+      ]);
+      const clean = cleanLanHostname(names);
+      PTR_CACHE.set(dev.ipv4, { name: clean, expiresAt: now + PTR_TTL_MS });
+      if (clean) dev.name = clean;
+    })
+  );
+  return devices;
+}
 
 export const UNIVERSAL_META = {
   id: 'universal',
@@ -101,7 +162,7 @@ export function parseNdpOutput(stdout, byMac = new Map()) {
   return byMac;
 }
 
-export async function scanArpNdpDevices() {
+export async function scanArpNdpDevices({ gatewayUrl } = {}) {
   const byMac = new Map();
 
   // IPv4 ARP table (macOS + Linux)
@@ -124,7 +185,8 @@ export async function scanArpNdpDevices() {
     parseNdpOutput(stdout, byMac);
   } catch {}
 
-  return [...byMac.values()];
+  const devices = [...byMac.values()];
+  return resolveLanHostnames(devices, gatewayUrl);
 }
 
 export class UniversalAdapter {
@@ -144,7 +206,7 @@ export class UniversalAdapter {
   }
 
   async listDevices() {
-    return scanArpNdpDevices();
+    return scanArpNdpDevices({ gatewayUrl: this.config?.gatewayUrl });
   }
 
   async blockDevice({ mac }) {

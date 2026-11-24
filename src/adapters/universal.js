@@ -9,12 +9,6 @@ const PTR_TTL_MS = 5 * 60_000;
 let cachedGatewayIp = null;
 
 async function getGatewayIpForPtr(gatewayUrl) {
-  if (gatewayUrl) {
-    try {
-      const host = new URL(gatewayUrl).hostname;
-      if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
-    } catch {}
-  }
   if (cachedGatewayIp) return cachedGatewayIp;
   try {
     const { stdout } = await execFileAsync('route', ['-n', 'get', 'default'], { timeout: 1000 });
@@ -26,6 +20,12 @@ async function getGatewayIpForPtr(gatewayUrl) {
     const m = stdout.match(/default\s+via\s+(\d+\.\d+\.\d+\.\d+)/i);
     if (m) { cachedGatewayIp = m[1]; return cachedGatewayIp; }
   } catch {}
+  if (gatewayUrl) {
+    try {
+      const host = new URL(gatewayUrl).hostname;
+      if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
+    } catch {}
+  }
   return null;
 }
 
